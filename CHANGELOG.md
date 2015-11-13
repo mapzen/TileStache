@@ -1,3 +1,26 @@
+v0.5.0
+------
+* Update sorts for `pois` and `places`
+* Update `kind` calculation for roads to include `aerialway`s
+* Add volume calculation transform
+* Update road sort key calculation
+* Remove `scalerank` for neighbourhoods
+* Allow exterior boundaries to be snapped to a grid
+* Improve exterior boundaries processing
+* Add post processing functions:
+  - generate address points from buildings
+  - drop certain features
+  - drop certain feature properties
+  - remove features with zero area
+  - remove duplicate features
+  - normalize duplicate stations
+  - only keep the first N features matching a criteria
+  - rank features based on a key
+  - normalize `aerialway`s
+  - numeric min filter
+  - copy features across `layers`
+  - replace geometry with a representative point
+
 v0.4.1
 ------
 * Make admin boundaries post-processing filter work with boundary linestring fragments rather than needing an oriented polygon.
