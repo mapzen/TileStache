@@ -1433,6 +1433,10 @@ def exterior_boundaries(feature_layers, zoom,
                     # TODO: log this as a warning!
                     continue
 
+                # skip any geometries that may have become empty
+                if snapped.is_empty:
+                    continue
+
             indexable_features.append((snapped, props, fid))
             indexable_shapes.append(geom_with_area(snapped, props.get('area')))
 
