@@ -1,3 +1,7 @@
+v0.5.1
+------
+* Protect against empty snapped geometries - resolves segfault
+
 v0.5.0
 ------
 * Update sorts for `pois` and `places`
