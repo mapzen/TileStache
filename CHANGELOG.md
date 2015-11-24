@@ -42,7 +42,7 @@ v0.3.0
 * Add smarts for dealing with maritime boundary attributes
 * Add tranform for water `tunnel`s
 
-0.0.2
+v0.2.0
 -----
 * Stable
 
