@@ -389,6 +389,14 @@ def place_ne_capital(shape, properties, fid, zoom):
     return shape, properties, fid
 
 
+def place_population_int(shape, properties, fid, zoom):
+    population_str = properties.get('population')
+    population = to_float(population_str)
+    if population is not None:
+        properties['population'] = int(population)
+    return shape, properties, fid
+
+
 def water_tunnel(shape, properties, fid, zoom):
     tunnel = properties.pop('tunnel', None)
     if tunnel in (None, 'no', 'false', '0'):
