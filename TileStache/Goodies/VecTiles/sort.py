@@ -41,11 +41,9 @@ def _by_scalerank(feature):
 def _by_population(feature):
     wkb, properties, fid = feature
     default_value = -1000
-    population_flt = to_float(properties.get('population'))
-    if population_flt is not None:
-        return int(population_flt)
-    else:
-        return default_value
+    # depends on a transform run to convert population to an integer
+    population = properties.get('population')
+    return default_value if population is None else population
 
 
 def _by_transit_routes(feature):
