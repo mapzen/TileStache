@@ -390,7 +390,7 @@ def place_ne_capital(shape, properties, fid, zoom):
 
 
 def place_population_int(shape, properties, fid, zoom):
-    population_str = properties.get('population')
+    population_str = properties.pop('population', None)
     population = to_float(population_str)
     if population is not None:
         properties['population'] = int(population)
