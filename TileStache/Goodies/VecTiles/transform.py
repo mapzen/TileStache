@@ -127,6 +127,9 @@ road_kind_aerialway = set(('gondola', 'cable_car', 'chair_lift', 'drag_lift',
                            'platter', 't-bar', 'goods', 'magic_carpet',
                            'rope_tow', 'yes', 'zip_line', 'j-bar', 'unknown',
                            'mixed_lift', 'canopy', 'cableway'))
+# top 10 values for piste:type from taginfo
+road_kind_piste = set(('nordic', 'downhill', 'sleigh', 'skitour', 'hike',
+                       'sled', 'yes', 'snow_park', 'playground', 'ski_jump'))
 
 
 def _road_kind(properties):
@@ -135,6 +138,9 @@ def _road_kind(properties):
         return 'highway'
     if highway in road_kind_major_road:
         return 'major_road'
+    piste_type = properties.get('piste_type')
+    if piste_type in road_kind_piste:
+        return 'piste'
     if highway in road_kind_path:
         return 'path'
     railway = properties.get('railway')
@@ -2600,3 +2606,39 @@ def make_representative_point(shape, properties, fid, zoom):
     shape = shape.representative_point()
 
     return shape, properties, fid
+
+
+def remove_abandoned_pistes(
+        feature_layers, zoom, source_layer=None, start_zoom=0):
+    """
+    Removes features tagged as abandoned pistes.
+
+    It checks the kind, because it doesn't matter if the piste is abandoned if
+    the kind was detected as a road or track. It also checks the value, as it
+    appears that 'piste:abandoned = no' accounts for 30% of the instances.
+
+    Finally, the piste_abandoned property is removed from the feature, as we
+    have filtered out all the 'yes' values, meaning that it conveys no useful
+    information any more.
+    """
+
+    assert source_layer, 'remove_abandoned_pistes: missing source layer'
+
+    if zoom < start_zoom:
+        return None
+
+    layer = _find_layer(feature_layers, source_layer)
+    if layer is None:
+        return None
+
+    new_features = []
+    for feature in layer['features']:
+        shape, props, fid = feature
+
+        piste_abandoned = props.pop('piste_abandoned')
+        kind = props.get('kind')
+        if piste_abandoned != 'yes' or kind != 'piste':
+            new_features.append(feature)
+
+    layer['features'] = new_features
+    return layer
