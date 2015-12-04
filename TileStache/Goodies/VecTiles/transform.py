@@ -2635,7 +2635,7 @@ def remove_abandoned_pistes(
     for feature in layer['features']:
         shape, props, fid = feature
 
-        piste_abandoned = props.pop('piste_abandoned')
+        piste_abandoned = props.pop('piste_abandoned', None)
         kind = props.get('kind')
         if piste_abandoned != 'yes' or kind != 'piste':
             new_features.append(feature)
