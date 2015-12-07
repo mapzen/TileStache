@@ -152,6 +152,8 @@ def _road_kind(properties):
     aerialway = properties.get('aerialway')
     if aerialway in road_kind_aerialway:
         return 'aerialway'
+    if highway == 'motorway_junction':
+        return 'exit'
     return 'minor_road'
 
 
