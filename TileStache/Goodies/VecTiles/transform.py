@@ -154,6 +154,11 @@ def _road_kind(properties):
         return 'aerialway'
     if highway == 'motorway_junction':
         return 'exit'
+    leisure = properties.get('leisure')
+    if leisure == 'track':
+        # note: racetrack rather than track, as track might be confusing
+        # between a track for racing and a track as in a faint trail.
+        return 'racetrack'
     return 'minor_road'
 
 
