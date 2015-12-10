@@ -30,6 +30,12 @@ digits_pattern = re.compile('^[0-9-]+$')
 # parenthetical list of line names.
 station_pattern = re.compile('([^(]*)\(([^)]*)\).*')
 
+# used to detect if an airport's IATA code is the "short"
+# 3-character type. there are also longer codes, and ones
+# which include numbers, but those seem to be used for
+# less important airports.
+iata_short_code_pattern = re.compile('^[A-Z]{3}$')
+
 
 def _to_float_meters(x):
     if x is None:
@@ -2649,3 +2655,32 @@ def remove_abandoned_pistes(
 
     layer['features'] = new_features
     return layer
+
+
+def add_iata_code_to_airports(shape, properties, fid, zoom):
+    """
+    If the feature is an airport, and it has a 3-character
+    IATA code in its tags, then move that code to its
+    properties.
+    """
+
+    kind = properties.get('kind')
+    if kind not in ('aerodrome', 'airport'):
+        return shape, properties, fid
+
+    tags = properties.get('tags')
+    if not tags:
+        return shape, properties, fid
+
+    iata_code = tags.get('iata')
+    if not iata_code:
+        return shape, properties, fid
+
+    # IATA codes should be uppercase, and most are, but there
+    # might be some in lowercase, so just normalise to upper
+    # here.
+    iata_code = iata_code.upper()
+    if iata_short_code_pattern.match(iata_code):
+        properties['iata'] = iata_code
+
+    return shape, properties, fid
