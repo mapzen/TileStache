@@ -165,6 +165,9 @@ def _road_kind(properties):
         # note: racetrack rather than track, as track might be confusing
         # between a track for racing and a track as in a faint trail.
         return 'racetrack'
+    man_made = properties.get('man_made')
+    if man_made == 'pier':
+        return 'path'
     return 'minor_road'
 
 
