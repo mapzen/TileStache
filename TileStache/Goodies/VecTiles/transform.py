@@ -306,9 +306,9 @@ def road_sort_key(shape, properties, fid, zoom):
         sort_val += 16
     elif aerialway in ('gondola', 'cable_car'):
         sort_val += 19
-    elif aerialway in ('chair_lift'):
+    elif aerialway == 'chair_lift':
         sort_val += 18
-    elif aerialway is not None:
+    elif aerialway != '':
         sort_val += 16
     else:
         sort_val += 15
