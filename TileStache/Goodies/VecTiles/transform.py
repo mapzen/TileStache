@@ -305,11 +305,11 @@ def road_sort_key(shape, properties, fid, zoom):
     elif highway in ('unclassified', 'service', 'minor'):
         sort_val += 16
     elif aerialway in ('gondola', 'cable_car'):
-        sort_val += 19
-    elif aerialway in ('chair_lift'):
-        sort_val += 18
-    elif aerialway is not None:
-        sort_val += 16
+        sort_val += 27
+    elif aerialway == 'chair_lift':
+        sort_val += 26
+    elif aerialway != '':
+        sort_val += 25
     else:
         sort_val += 15
 
@@ -336,6 +336,12 @@ def road_sort_key(shape, properties, fid, zoom):
         elif (tunnel in ('yes', 'true') or
               (railway == 'subway' and tunnel not in ('no', 'false'))):
             sort_val -= 10
+
+        # Keep aerialways above (almost) everything else, including bridges,
+        # but make sure it doesn't go beyond the 0-34 range. (still need to
+        # leave space for explicit layer).
+        if aerialway != '':
+            sort_val = min(34, sort_val + 10)
 
         # Explicit layer is clipped to [-5, 5] range. Note that
         # the layer, if present, will be a Float due to the
