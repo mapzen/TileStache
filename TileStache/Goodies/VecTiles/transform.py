@@ -1184,7 +1184,7 @@ _landuse_sort_order = {
     'substation': 4,
     'university': 4,
     'urban': 1,
-    'winter_sports': 4,
+    'winter_sports': 2,
     'zoo': 4
 }
 
