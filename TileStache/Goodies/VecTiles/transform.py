@@ -338,9 +338,10 @@ def road_sort_key(shape, properties, fid, zoom):
             sort_val -= 10
 
         # Keep aerialways above (almost) everything else, including bridges,
-        # but make sure it doesn't go beyond the 0-39 range.
+        # but make sure it doesn't go beyond the 0-34 range. (still need to
+        # leave space for explicit layer).
         if aerialway != '':
-            sort_val = min(39, sort_val + 10)
+            sort_val = min(34, sort_val + 10)
 
         # Explicit layer is clipped to [-5, 5] range. Note that
         # the layer, if present, will be a Float due to the
