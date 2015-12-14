@@ -1150,6 +1150,7 @@ def remap_deprecated_landuse_kinds(shape, properties, fid, zoom):
 _landuse_sort_order = {
     'aerodrome': 4,
     'apron': 5,
+    'beach': 4,
     'cemetery': 4,
     'commercial': 4,
     'conservation': 2,
@@ -1177,6 +1178,7 @@ _landuse_sort_order = {
     'substation': 4,
     'university': 4,
     'urban': 1,
+    'winter_sports': 4,
     'zoo': 4
 }
 
