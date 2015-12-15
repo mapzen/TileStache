@@ -259,15 +259,21 @@ def road_classifier(shape, properties, fid, zoom):
     if source == 'naturalearthdata.com':
         return shape, properties, fid
 
-    highway = properties.get('highway')
-    tunnel = properties.get('tunnel')
-    bridge = properties.get('bridge')
-    is_link = 'yes' if highway and highway.endswith('_link') else 'no'
-    is_tunnel = 'yes' if tunnel and tunnel in ('yes', 'true') else 'no'
-    is_bridge = 'yes' if bridge and bridge in ('yes', 'true') else 'no'
-    properties['is_link'] = is_link
-    properties['is_tunnel'] = is_tunnel
-    properties['is_bridge'] = is_bridge
+    properties.pop('is_link', None)
+    properties.pop('is_tunnel', None)
+    properties.pop('is_bridge', None)
+
+    highway = properties.get('highway', '')
+    tunnel = properties.get('tunnel', '')
+    bridge = properties.get('bridge', '')
+
+    if highway.endswith('_link'):
+        properties['is_link'] = 'yes'
+    if tunnel in ('yes', 'true'):
+        properties['is_tunnel'] = 'yes'
+    if bridge in ('yes', 'true'):
+        properties['is_bridge'] = 'yes'
+
     return shape, properties, fid
 
 
