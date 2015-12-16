@@ -1,3 +1,13 @@
+v0.6.0
+------
+* Ensure that the `population` property, if present, is an integer.
+* Add IATA short (3-character) codes to airports.
+* Interpret road kinds for pistes, motorway junctions, racetracks and piers.
+* Normalise `is_link`, `is_tunnel` and `is_bridge` so that it is not present in the negative; it should only be present when its value is positive.
+* Re-order aerialways to be above all road types, including bridges, unless overriden by a `layer` property.
+* Added sort order properties for beaches and winter sports areas.
+* Added a function to remove abandoned pistes from the output.
+
 v0.5.1
 ------
 * Protect against empty snapped geometries - resolves segfault
