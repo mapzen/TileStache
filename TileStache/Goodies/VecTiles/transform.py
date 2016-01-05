@@ -2701,3 +2701,22 @@ def add_iata_code_to_airports(shape, properties, fid, zoom):
         properties['iata'] = iata_code
 
     return shape, properties, fid
+
+
+def normalize_leisure_kind(shape, properties, fid, zoom):
+    """
+    Normalise the various ways of representing fitness POIs to a
+    single kind=fitness.
+    """
+
+    kind = properties.get('kind')
+    if kind in ('fitness_centre', 'gym'):
+        properties['kind'] = 'fitness'
+
+    elif kind == 'sports_centre':
+        sport = properties.get('sport')
+        if sport in ('fitness', 'gym'):
+            properties.pop('sport')
+            properties['kind'] = 'fitness'
+
+    return shape, properties, fid
