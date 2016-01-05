@@ -17,6 +17,7 @@ from shapely.geometry.collection import GeometryCollection
 from util import to_float
 from sort import pois as sort_pois
 import re
+import sys
 
 
 feet_pattern = re.compile('([+-]?[0-9.]+)\'(?: *([+-]?[0-9.]+)")?')
@@ -371,6 +372,35 @@ def road_sort_key(shape, properties, fid, zoom):
 
 def road_trim_properties(shape, properties, fid, zoom):
     properties = _remove_properties(properties, 'bridge', 'layer', 'tunnel')
+
+    kind = properties.get('kind')
+    props_to_drop = []
+
+    if kind == 'path':
+        if zoom < 15:
+            props_to_drop.extend(['is_bridge', 'is_tunnel', 'oneway'])
+        if zoom < 17:
+            props_to_drop.extend(['name', 'ref', 'network'])
+
+    elif kind == 'minor_road':
+        if zoom < 13:
+            props_to_drop.extend(['is_bridge', 'is_tunnel', 'oneway'])
+        if zoom < 15:
+            props_to_drop.extend(['name', 'ref', 'network'])
+
+    elif kind == 'major_road':
+        if zoom < 13:
+            props_to_drop.extend(['is_bridge', 'is_tunnel', 'oneway'])
+        if zoom < 12:
+            props_to_drop.extend(['name', 'ref', 'network'])
+
+    elif kind == 'highway':
+        if zoom < 13:
+            props_to_drop.extend(['is_bridge', 'is_tunnel', 'oneway'])
+        if zoom < 7:
+            props_to_drop.extend(['name', 'ref', 'network'])
+
+    properties = _remove_properties(properties, *props_to_drop)
     return shape, properties, fid
 
 
@@ -2079,17 +2109,21 @@ def drop_features_where(
     return layer
 
 
-def drop_properties(
-        feature_layers, zoom, source_layer=None, start_zoom=0,
-        properties=None):
+def _project_properties(
+        feature_layers, zoom, property_func, source_layer=None, start_zoom=0,
+        end_zoom=None):
     """
-    Drop all configured properties for features in source_layer
+    Project properties down to a subset of the existing properties based on a
+    predicate `property_func` which returns true when the property should be
+    kept.
     """
 
-    assert source_layer, 'drop_properties: missing source layer'
-    assert properties, 'drop_properties: missing properties'
+    assert source_layer, '_project_properties: missing source layer'
 
     if zoom < start_zoom:
+        return None
+
+    if end_zoom is not None and zoom > end_zoom:
         return None
 
     layer = _find_layer(feature_layers, source_layer)
@@ -2099,10 +2133,43 @@ def drop_properties(
     for feature in layer['features']:
         shape, f_props, fid = feature
 
-        for prop_to_drop in properties:
-            f_props.pop(prop_to_drop, None)
+        for p in f_props:
+            if not property_func(p):
+                f_props.pop(p)
 
     return layer
+
+
+def drop_properties(
+        feature_layers, zoom, source_layer=None, start_zoom=0,
+        properties=None, end_zoom=None):
+    """
+    Drop all configured properties for features in source_layer
+    """
+
+    assert properties, 'drop_properties: missing properties'
+
+    def keep_property(p):
+        return p not in properties
+
+    return _project_properties(feature_layers, zoom, keep_property,
+                               source_layer, start_zoom, end_zoom)
+
+
+def keep_properties(
+        feature_layers, zoom, source_layer=None, start_zoom=0,
+        properties=None, end_zoom=None):
+    """
+    Keep only configured properties for features in source_layer
+    """
+
+    assert properties, 'keep_properties: missing properties'
+
+    def keep_property(p):
+        return p in properties
+
+    return _project_properties(feature_layers, zoom, keep_property,
+                               source_layer, start_zoom, end_zoom)
 
 
 def remove_zero_area(shape, properties, fid, zoom):
@@ -2701,3 +2768,72 @@ def add_iata_code_to_airports(shape, properties, fid, zoom):
         properties['iata'] = iata_code
 
     return shape, properties, fid
+
+
+def merge_features(
+        feature_layers, zoom, source_layer=None, start_zoom=0,
+        end_zoom=None):
+    """
+    Merge (linear) features with the same properties together, attempting to
+    make the resulting geometry as large as possible. Note that this will
+    remove the IDs from any merged features.
+
+    At the moment, only merging for linear features is implemented, although
+    it would be possible to extend to other geometry types.
+    """
+
+    assert source_layer, 'merge_features: missing source layer'
+
+    if zoom < start_zoom:
+        return None
+
+    if end_zoom is not None and zoom > end_zoom:
+        return None
+
+    layer = _find_layer(feature_layers, source_layer)
+    if layer is None:
+        return None
+
+    # A dictionary mapping the properties of a feature to a tuple of the feature
+    # IDs and a list of shapes. When we merge the features, they will lose their
+    # individual IDs, so only keep the first.
+    #
+    # Note that, because dicts are mutable and therefore not hashable, we have
+    # to transform their items into a frozenset instead.
+    features_by_property = {}
+
+    # A list of all the features that we can't currently merge (at this time;
+    # points and polygons) which will be skipped by this procedure.
+    skipped_features = []
+
+    for shape, props, fid in layer['features']:
+        dims = _geom_dimensions(shape)
+        p_id = props.pop('id', None)
+        frozen_props = frozenset(props.items())
+
+        if dims != _LINE_DIMENSION:
+            skipped_features.append((shape, props, fid))
+
+        elif frozen_props in features_by_property:
+            features_by_property[frozen_props][2].append(shape)
+
+        else:
+            features_by_property[frozen_props] = (fid, p_id, [shape])
+
+    new_features = []
+    for frozen_props, (fid, p_id, shapes) in features_by_property.iteritems():
+        # we only have lines, so _linemerge is the best we can attempt.
+        #print>>sys.stderr, "SHAPES: %r" % shapes
+        s = []
+        for s2 in shapes:
+            s.extend(_flatten_geoms(s2))
+        multi = MultiLineString(s)
+        props = dict(frozen_props)
+        if p_id is not None:
+            props['id'] = p_id
+        new_features.append((_linemerge(multi), props, fid))
+
+    new_features.extend(skipped_features)
+    layer['features'] = new_features
+
+    return layer
