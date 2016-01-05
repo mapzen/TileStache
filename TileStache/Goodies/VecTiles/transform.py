@@ -243,6 +243,16 @@ def building_trim_properties(shape, properties, fid, zoom):
     return shape, properties, fid
 
 
+def pois_kind_aeroway_gate(shape, properties, fid, zoom):
+    aeroway = properties.pop('aeroway', None)
+    if aeroway is None:
+        return shape, properties, fid
+    kind = properties.get('kind')
+    if kind == 'gate' and aeroway:
+        properties['aeroway'] = aeroway
+    return shape, properties, fid
+
+
 def road_kind(shape, properties, fid, zoom):
     source = properties.get('source')
     assert source, 'Missing source in road query'
