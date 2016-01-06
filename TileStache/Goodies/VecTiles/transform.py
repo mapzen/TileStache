@@ -244,6 +244,16 @@ def building_trim_properties(shape, properties, fid, zoom):
     return shape, properties, fid
 
 
+def pois_kind_aeroway_gate(shape, properties, fid, zoom):
+    aeroway = properties.pop('aeroway', None)
+    if aeroway is None:
+        return shape, properties, fid
+    kind = properties.get('kind')
+    if kind == 'gate' and aeroway:
+        properties['aeroway'] = aeroway
+    return shape, properties, fid
+
+
 def road_kind(shape, properties, fid, zoom):
     source = properties.get('source')
     assert source, 'Missing source in road query'
@@ -2766,6 +2776,25 @@ def add_iata_code_to_airports(shape, properties, fid, zoom):
     iata_code = iata_code.upper()
     if iata_short_code_pattern.match(iata_code):
         properties['iata'] = iata_code
+
+    return shape, properties, fid
+
+
+def normalize_leisure_kind(shape, properties, fid, zoom):
+    """
+    Normalise the various ways of representing fitness POIs to a
+    single kind=fitness.
+    """
+
+    kind = properties.get('kind')
+    if kind in ('fitness_centre', 'gym'):
+        properties['kind'] = 'fitness'
+
+    elif kind == 'sports_centre':
+        sport = properties.get('sport')
+        if sport in ('fitness', 'gym'):
+            properties.pop('sport')
+            properties['kind'] = 'fitness'
 
     return shape, properties, fid
 
