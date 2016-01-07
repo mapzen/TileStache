@@ -2089,30 +2089,87 @@ def drop_features_where(
     return layer
 
 
-def drop_properties(
-        feature_layers, zoom, source_layer=None, start_zoom=0,
-        properties=None):
+def _project_properties(
+        feature_layers, zoom, where, action, source_layer=None, start_zoom=0,
+        end_zoom=None):
     """
-    Drop all configured properties for features in source_layer
+    Project properties down to a subset of the existing properties based on a
+    predicate `where` which returns true when the function `action` should be
+    performed. The value returned from `action` replaces the properties of the
+    feature.
     """
 
-    assert source_layer, 'drop_properties: missing source layer'
-    assert properties, 'drop_properties: missing properties'
+    assert source_layer, '_project_properties: missing source layer'
 
     if zoom < start_zoom:
+        return None
+
+    if end_zoom is not None and zoom > end_zoom:
         return None
 
     layer = _find_layer(feature_layers, source_layer)
     if layer is None:
         return None
 
+    if where is not None:
+        where = compile(where, 'queries.yaml', 'eval')
+
+    new_features = []
     for feature in layer['features']:
-        shape, f_props, fid = feature
+        shape, props, fid = feature
 
-        for prop_to_drop in properties:
-            f_props.pop(prop_to_drop, None)
+        # copy params to add a 'zoom' one. would prefer '$zoom', but apparently
+        # that's not allowed in python syntax.
+        local = props.copy()
+        local['zoom'] = zoom
 
+        if where is None or eval(where, {}, local):
+            props = action(props)
+
+        new_features.append((shape, props, fid))
+
+    layer['features'] = new_features
     return layer
+
+
+def drop_properties(
+        feature_layers, zoom, source_layer=None, start_zoom=0,
+        properties=None, end_zoom=None, where=None):
+    """
+    Drop all configured properties for features in source_layer
+    """
+
+    assert properties, 'drop_properties: missing properties'
+
+    def action(p):
+        return _remove_properties(p, *properties)
+
+    return _project_properties(feature_layers, zoom, where, action,
+                               source_layer, start_zoom, end_zoom)
+
+
+def keep_properties(
+        feature_layers, zoom, source_layer=None, start_zoom=0,
+        properties=None, end_zoom=None, where=None):
+    """
+    Keep only configured properties for features in source_layer
+    """
+
+    assert properties, 'keep_properties: missing properties'
+
+    if where is not None:
+        where = compile(where, 'queries.yaml', 'eval')
+
+    def keep_property(p, props):
+        # copy params to add a 'zoom' one. would prefer '$zoom', but apparently
+        # that's not allowed in python syntax.
+        local = props.copy()
+        local['zoom'] = zoom
+
+        return p in properties and (where is None or eval(where, {}, local))
+
+    return _project_properties(feature_layers, zoom, keep_property,
+                               source_layer, start_zoom, end_zoom)
 
 
 def remove_zero_area(shape, properties, fid, zoom):
@@ -2730,3 +2787,82 @@ def normalize_leisure_kind(shape, properties, fid, zoom):
             properties['kind'] = 'fitness'
 
     return shape, properties, fid
+
+
+def merge_features(
+        feature_layers, zoom, source_layer=None, start_zoom=0,
+        end_zoom=None):
+    """
+    Merge (linear) features with the same properties together, attempting to
+    make the resulting geometry as large as possible. Note that this will
+    remove the IDs from any merged features.
+
+    At the moment, only merging for linear features is implemented, although
+    it would be possible to extend to other geometry types.
+    """
+
+    assert source_layer, 'merge_features: missing source layer'
+
+    if zoom < start_zoom:
+        return None
+
+    if end_zoom is not None and zoom > end_zoom:
+        return None
+
+    layer = _find_layer(feature_layers, source_layer)
+    if layer is None:
+        return None
+
+    # a dictionary mapping the properties of a feature to a tuple of the feature
+    # IDs and a list of shapes. When we merge the features, they will lose their
+    # individual IDs, so only keep the first.
+    features_by_property = {}
+
+    # a list of all the features that we can't currently merge (at this time;
+    # points and polygons) which will be skipped by this procedure.
+    skipped_features = []
+
+    for shape, props, fid in layer['features']:
+        dims = _geom_dimensions(shape)
+
+        # keep the 'id' property as well as the feature ID, as these are often
+        # distinct.
+        p_id = props.pop('id', None)
+
+        # because dicts are mutable and therefore not hashable, we have to
+        # transform their items into a frozenset instead.
+        frozen_props = frozenset(props.items())
+
+        if dims != _LINE_DIMENSION:
+            skipped_features.append((shape, props, fid))
+
+        elif frozen_props in features_by_property:
+            features_by_property[frozen_props][2].append(shape)
+
+        else:
+            features_by_property[frozen_props] = (fid, p_id, [shape])
+
+    new_features = []
+    for frozen_props, (fid, p_id, shapes) in features_by_property.iteritems():
+        # we only have lines, so _linemerge is the best we can attempt. however,
+        # the `shapes` we're operating on may be linestrings, multi-linestrings
+        # or even empty, so the first thing to do is to flatten them into a
+        # single geometry.
+        list_of_linestrings = []
+        for shape in shapes:
+            list_of_linestrings.extend(_flatten_geoms(shape))
+        multi = MultiLineString(list_of_linestrings)
+
+        # thaw the frozen properties to use in the new feature.
+        props = dict(frozen_props)
+
+        # restore any 'id' property.
+        if p_id is not None:
+            props['id'] = p_id
+
+        new_features.append((_linemerge(multi), props, fid))
+
+    new_features.extend(skipped_features)
+    layer['features'] = new_features
+
+    return layer
