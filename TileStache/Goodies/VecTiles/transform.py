@@ -2866,3 +2866,27 @@ def merge_features(
     layer['features'] = new_features
 
     return layer
+
+
+def normalize_tourism_kind(shape, properties, fid, zoom):
+    """
+    There are many tourism-related tags, including 'zoo=*' and 'attraction=*' in
+    addition to 'tourism=*'. This function promotes things with zoo and
+    attraction tags have those values as their main kind.
+
+    See https://github.com/mapzen/vector-datasource/issues/440 for more details.
+    """
+
+    zoo = properties.pop('zoo', None)
+    if zoo is not None:
+        properties['kind'] = zoo
+        properties['tourism'] = 'attraction'
+        return (shape, properties, fid)
+
+    attraction = properties.pop('attraction', None)
+    if attraction is not None:
+        properties['kind'] = attraction
+        properties['tourism'] = 'attraction'
+        return (shape, properties, fid)
+
+    return (shape, properties, fid)
