@@ -1,3 +1,12 @@
+v0.7.0
+------
+
+* Add function to normalise tourism kind and related properties.
+* Add function to drop properties from features under some configurable set of conditions.
+* Implement merging for linear features.
+* Add code to normalise leisure kinds for fitness-related POIs.
+* Add transform to include aeroway tag for `kind=gate`.
+
 v0.6.0
 ------
 * Ensure that the `population` property, if present, is an integer.
