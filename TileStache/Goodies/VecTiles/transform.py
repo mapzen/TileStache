@@ -2038,16 +2038,9 @@ def drop_features_where(
         feature_layers, zoom, source_layer=None, start_zoom=0,
         where=None):
     """
-    Drops some features entirely when they have a property
-    named `property_name` and its value is true. Note that it
-    must be identically True, not just truthy. Also can
-    drop the property if `drop_property` is truthy. If
-    `geom_types` is present and not None, then only types in
-    that list are considered for dropping.
-
-    This is useful for dropping features which we want to use
-    earlier in the pipeline (e.g: to generate points), but
-    that we don't want to appear in the final output.
+    Drop features entirely that match the particular "where"
+    condition. Any feature properties are available to use, as well as
+    the properties dict itself, called "properties" in the scope.
     """
 
     assert source_layer, 'drop_features_where: missing source layer'
