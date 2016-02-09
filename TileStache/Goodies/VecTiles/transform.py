@@ -2036,23 +2036,15 @@ def parse_layer_as_float(shape, properties, fid, zoom):
 
 def drop_features_where(
         feature_layers, zoom, source_layer=None, start_zoom=0,
-        property_name=None, drop_property=True,
-        geom_types=None):
+        where=None):
     """
-    Drops some features entirely when they have a property
-    named `property_name` and its value is true. Note that it
-    must be identically True, not just truthy. Also can
-    drop the property if `drop_property` is truthy. If
-    `geom_types` is present and not None, then only types in
-    that list are considered for dropping.
-
-    This is useful for dropping features which we want to use
-    earlier in the pipeline (e.g: to generate points), but
-    that we don't want to appear in the final output.
+    Drop features entirely that match the particular "where"
+    condition. Any feature properties are available to use, as well as
+    the properties dict itself, called "properties" in the scope.
     """
 
     assert source_layer, 'drop_features_where: missing source layer'
-    assert property_name, 'drop_features_where: missing property name'
+    assert where, 'drop_features_where: missing where'
 
     if zoom < start_zoom:
         return None
@@ -2061,29 +2053,17 @@ def drop_features_where(
     if layer is None:
         return None
 
+    where = compile(where, 'queries.yaml', 'eval')
+
     new_features = []
     for feature in layer['features']:
         shape, properties, fid = feature
 
-        matches_geom_type = \
-            geom_types is None or \
-            shape.geom_type in geom_types
+        local = properties.copy()
+        local['properties'] = properties
 
-        # figure out what to do with the property - do we
-        # want to drop it, or just fetch it?
-        func = properties.get
-        if drop_property:
-            func = properties.pop
-
-        val = func(property_name, None)
-
-        # skip (i.e: drop) the geometry if the value is
-        # true and it's the geometry type we want.
-        if val == True and matches_geom_type:
-            continue
-
-        # default case is to keep the feature
-        new_features.append((shape, properties, fid))
+        if not eval(where, {}, local):
+            new_features.append(feature)
 
     layer['features'] = new_features
     return layer
