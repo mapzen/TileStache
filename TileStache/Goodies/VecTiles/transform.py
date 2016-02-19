@@ -10,6 +10,7 @@ from shapely.geometry import Point
 from shapely.geometry import LineString
 from shapely.geometry import LinearRing
 from shapely.geometry import Polygon
+from shapely.geometry import box as Box
 from shapely.geometry.multipoint import MultiPoint
 from shapely.geometry.multilinestring import MultiLineString
 from shapely.geometry.multipolygon import MultiPolygon
@@ -1384,13 +1385,24 @@ def _snap_to_grid(shape, grid_size):
         raise ValueError("_snap_to_grid: unimplemented for shape type %s" % repr(shape_type))
 
 
+# returns a geometry which is the given bounds expanded by `factor`. that is,
+# if the original shape was a 1x1 box, the new one will be `factor`x`factor`
+# box, with the same centroid as the original box.
+def _calculate_padded_bounds(factor, bounds):
+    min_x, min_y, max_x, max_y = bounds
+    dx = 0.5 * (max_x - min_x) * (factor - 1.0)
+    dy = 0.5 * (max_y - min_y) * (factor - 1.0)
+    return Box(min_x - dx, min_y - dy, max_x + dx, max_y + dy)
+
+
 def exterior_boundaries(feature_layers, zoom,
                         base_layer,
                         new_layer_name=None,
                         prop_transform=None,
                         buffer_size=None,
                         start_zoom=0,
-                        snap_tolerance=None):
+                        snap_tolerance=None,
+                        bounds=None):
     """
     create new fetures from the boundaries of polygons
     in the base layer, subtracting any sections of the
@@ -1415,12 +1427,24 @@ def exterior_boundaries(feature_layers, zoom,
 
     any features in feature_layers[layer] which aren't
     polygons will be ignored.
+
+    note that the `bounds` kwarg should be filled out
+    automatically by tilequeue - it does not have to be
+    provided from the config.
     """
     layer = None
 
     # don't start processing until the start zoom
     if zoom < start_zoom:
         return layer
+
+    # check that the bounds parameter was, in fact, passed.
+    assert bounds is not None, \
+        "Automatic bounds parameter should have been passed."
+
+    # make a bounding box 3x larger than the original tile, but with the same
+    # centroid.
+    padded_bbox = _calculate_padded_bounds(3, bounds)
 
     # search through all the layers and extract the one
     # which has the name of the base layer we were given
@@ -1469,27 +1493,28 @@ def exterior_boundaries(feature_layers, zoom,
     indexable_shapes = list()
     for shape, props, fid in features:
         if shape.geom_type in ('Polygon', 'MultiPolygon'):
-            snapped = shape
+            # clip the feature to the padded bounds of the tile
+            clipped = shape.intersection(padded_bbox)
+
+            snapped = clipped
             if snap_tolerance is not None:
-                snapped = _snap_to_grid(shape, snap_tolerance)
+                snapped = _snap_to_grid(clipped, snap_tolerance)
 
-                # snapping coordinates might make the shape
-                # invalid, so we need a way to clean them.
-                # one simple, but not foolproof, way is to
-                # buffer them by 0.
-                if not snapped.is_valid:
-                    snapped = snapped.buffer(0)
+            # snapping coordinates and clipping shapes might make the shape
+            # invalid, so we need a way to clean them. one simple, but not
+            # foolproof, way is to buffer them by 0.
+            if not snapped.is_valid:
+                snapped = snapped.buffer(0)
 
-                # that still might not have done the trick,
-                # so drop any polygons which are still
-                # invalid so as not to cause errors later.
-                if not snapped.is_valid:
-                    # TODO: log this as a warning!
-                    continue
+            # that still might not have done the trick, so drop any polygons
+            # which are still invalid so as not to cause errors later.
+            if not snapped.is_valid:
+                # TODO: log this as a warning!
+                continue
 
-                # skip any geometries that may have become empty
-                if snapped.is_empty:
-                    continue
+            # skip any geometries that may have become empty
+            if snapped.is_empty:
+                continue
 
             indexable_features.append((snapped, props, fid))
             indexable_shapes.append(geom_with_area(snapped, props.get('area')))
