@@ -2919,7 +2919,7 @@ def normalize_social_kind(shape, properties, fid, zoom):
                 # leave the original tag on for disambiguation
                 properties['social_facility'] = social_facility
 
-        # normalise the for list to an actual list
+            # normalise the 'for' list to an actual list
             for_list = tags.get('social_facility:for')
             if for_list:
                 properties['for'] = for_list.split(';')
