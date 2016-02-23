@@ -2895,3 +2895,51 @@ def normalize_tourism_kind(shape, properties, fid, zoom):
         return (shape, properties, fid)
 
     return (shape, properties, fid)
+
+
+def normalize_social_kind(shape, properties, fid, zoom):
+    """
+    Social facilities have an `amenity=social_facility` tag, but more
+    information is generally available in the `social_facility=*` tag, so it
+    is more informative to put that as the `kind`. We keep the old tag as
+    well, for disambiguation.
+
+    Additionally, we normalise the `social_facility:for` tag, which is a
+    semi-colon delimited list, to an actual list under the `for` property.
+    This should make it easier to consume.
+    """
+
+    kind = properties.get('kind')
+    if kind == 'social_facility':
+        tags = properties.get('tags', {})
+        if tags:
+            social_facility = tags.get('social_facility')
+            if social_facility:
+                properties['kind'] = social_facility
+                # leave the original tag on for disambiguation
+                properties['social_facility'] = social_facility
+
+            # normalise the 'for' list to an actual list
+            for_list = tags.get('social_facility:for')
+            if for_list:
+                properties['for'] = for_list.split(';')
+
+    return (shape, properties, fid)
+
+
+def normalize_medical_kind(shape, properties, fid, zoom):
+    """
+    Many medical practices, such as doctors and dentists, have a specialty,
+    which is indicated through the `healthcare:specialty` tag. This is a
+    semi-colon delimited list, so we expand it to an actual list.
+    """
+
+    kind = properties.get('kind')
+    if kind in ['clinic', 'doctors', 'dentist']:
+        tags = properties.get('tags', {})
+        if tags:
+            specialty = tags.get('healthcare:specialty')
+            if specialty:
+                properties['specialty'] = specialty.split(';')
+
+    return (shape, properties, fid)
