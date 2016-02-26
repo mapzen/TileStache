@@ -1171,38 +1171,98 @@ def remap_deprecated_landuse_kinds(shape, properties, fid, zoom):
 
 # explicit order for some kinds of landuse
 _landuse_sort_order = {
-    'aerodrome': 4,
-    'apron': 5,
-    'beach': 4,
-    'cemetery': 4,
-    'commercial': 4,
-    'conservation': 2,
-    'farm': 3,
-    'farmland': 3,
-    'forest': 3,
-    'generator': 3,
-    'golf_course': 4,
-    'hospital': 4,
-    'nature_reserve': 2,
-    'park': 2,
-    'parking': 4,
-    'pedestrian': 4,
-    'place_of_worship': 4,
-    'plant': 3,
-    'playground': 4,
-    'railway': 4,
-    'recreation_ground': 4,
-    'residential': 1,
-    'retail': 4,
-    'runway': 5,
-    'rural': 1,
-    'school': 4,
-    'stadium': 3,
-    'substation': 4,
-    'university': 4,
-    'urban': 1,
-    'winter_sports': 2,
-    'zoo': 4
+    'aerodrome': 49,
+    'allotments': 83,
+    'amusement_ride': 97,
+    'animal': 92,
+    'apron': 51,
+    'aquarium': 46,
+    'artwork': 93,
+    'attraction': 94,
+    'aviary': 72,
+    'beach': 87,
+    'breakwater': 221,
+    'bridge': 226,
+    'carousel': 95,
+    'cemetery': 66,
+    'cinema': 69,
+    'college': 32,
+    'commercial': 35,
+    'common': 56,
+    'conservation': 24,
+    'cutline': 223,
+    'dike': 224,
+    'enclosure': 74,
+    'farm': 28,
+    'farmland': 29,
+    'farmyard': 61,
+    'footway': 100,
+    'forest': 30,
+    'fuel': 68,
+    'garden': 88,
+    'generator': 84,
+    'glacier': 12,
+    'golf_course': 47,
+    'grass': 78,
+    'groyne': 222,
+    'hanami': 86,
+    'hospital': 45,
+    'industrial': 23,
+    'land': 220,
+    'library': 70,
+    'maze': 85,
+    'meadow': 79,
+    'military': 37,
+    'national_park': 19,
+    'nature_reserve': 25,
+    'park or protected land': 17,
+    'park': 26,
+    'park': 33,
+    'parking': 64,
+    'pedestrian': 89,
+    'petting_zoo': 73,
+    'pier': 225,
+    'pitch': 91,
+    'place_of_worship': 65,
+    'plant': 77,
+    'playground': 90,
+    'prison': 38,
+    'protected_area': 18,
+    'quarry': 63,
+    'railway': 62,
+    'recreation_ground': 48,
+    'residential': 22,
+    'resort': 43,
+    'retail': 36,
+    'roller_coaster': 75,
+    'runway': 52,
+    'rural': 15,
+    'school': 67,
+    'scrub': 80,
+    'sports_centre': 54,
+    'stadium': 53,
+    'substation': 60,
+    'summer_toboggan': 76,
+    'taxiway': 50,
+    'theatre': 71,
+    'theme_park': 39,
+    'tower': 99,
+    'trail_riding_station': 44,
+    'university': 31,
+    'urban area': 13,
+    'urban': 14,
+    'village_green': 55,
+    'wastewater_plant': 57,
+    'water_slide': 96,
+    'water_works': 58,
+    'wetland': 81,
+    'wilderness_hut': 98,
+    'wildlife_park': 40,
+    'winery': 41,
+    'winter_sports': 27,
+    'wood': 82,
+    'works': 59,
+    'zoo': 42
 }
 
 
@@ -1213,12 +1273,21 @@ _landuse_sort_order = {
 # steps on the client.
 def landuse_sort_key(shape, properties, fid, zoom):
     kind = properties.get('kind')
-
+    
+    # land is at 10
+    # default to 11 for landuse if not in the lookup table
+    # (landuse lookup table starts at 12)
+    fallback_sort_key = 11
+    
     if kind is not None:
         key = _landuse_sort_order.get(kind)
         if key is not None:
             properties['sort_key'] = key
-
+        else:
+            properties['sort_key'] = fallback_sort_key
+    else:
+        properties['sort_key'] = fallback_sort_key
+    
     return shape, properties, fid
 
 
