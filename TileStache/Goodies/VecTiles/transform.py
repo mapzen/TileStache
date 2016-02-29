@@ -307,55 +307,55 @@ def road_sort_key(shape, properties, fid, zoom):
 
     if (highway == 'motorway' or
             ne_type in ('Major Highway', 'Beltway', 'Bypass')):
-        sort_val += 44
+        sort_val += 81
     elif is_railway:
-        sort_val += 43
+        sort_val += 80
     elif highway == 'trunk' or ne_type == 'Secondary Highway':
-        sort_val += 42
+        sort_val += 79
     elif highway == 'primary' or ne_type == 'Road':
-        sort_val += 41
+        sort_val += 78
     elif highway == 'secondary' or aeroway == 'runway':
-        sort_val += 40
+        sort_val += 77
     elif highway == 'tertiary' or aeroway == 'taxiway' or ne_type == 'Track':
-        sort_val += 39
+        sort_val += 76
     elif highway.endswith('_link'):
-        sort_val += 38
+        sort_val += 75
     elif (highway in ('residential', 'unclassified', 'road', 'living_street')
           or ne_type == 'Unknown'):
-        sort_val += 37
+        sort_val += 60
     elif highway in ('service', 'minor'):
-        sort_val += 36
+        sort_val += 58
     elif aerialway in ('gondola', 'cable_car'):
-        sort_val += 47
+        sort_val += 92
     elif aerialway == 'chair_lift':
-        sort_val += 46
+        sort_val += 91
     elif aerialway:
-        sort_val += 45
+        sort_val += 90
     else:
-        sort_val += 35
+        sort_val += 55
 
     if is_railway and service:
         if service in ('spur', 'siding'):
             # make sort val more like residential, unclassified which
             # also come in at zoom 12
-            sort_val -= 6
+            sort_val -= 19
         elif service == 'yard':
-            sort_val -= 7
+            sort_val -= 21
         else:
-            sort_val -= 8
+            sort_val -= 23
 
     if highway == 'service' and service:
         # sort alley, driveway, etc... under service
-        sort_val -= 1
+        sort_val -= 2
 
     if zoom >= 15:
         bridge = properties.get('bridge')
         tunnel = properties.get('tunnel')
         if bridge in ('yes', 'true') or aerialway:
-            sort_val += 40
+            sort_val += 50
         elif (tunnel in ('yes', 'true') or
               (railway == 'subway' and tunnel not in ('no', 'false'))):
-            sort_val -= 40
+            sort_val -= 50
 
         # Explicit layer is clipped to [-5, 5] range. Note that
         # the layer, if present, will be a Float due to the
