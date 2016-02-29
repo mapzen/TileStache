@@ -323,7 +323,7 @@ def road_sort_key(shape, properties, fid, zoom):
     elif (highway in ('residential', 'unclassified', 'road', 'living_street')
           or ne_type == 'Unknown'):
         sort_val += 37
-    elif highway in ('unclassified', 'service', 'minor'):
+    elif highway in ('service', 'minor'):
         sort_val += 36
     elif aerialway in ('gondola', 'cable_car'):
         sort_val += 47
