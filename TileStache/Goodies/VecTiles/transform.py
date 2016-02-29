@@ -292,33 +292,36 @@ def road_sort_key(shape, properties, fid, zoom):
     # Note! parse_layer_as_float must be run before this filter.
 
     floor = 300
-    ceiling = 385
+    ceiling = 447
     sort_val = floor
 
     highway = properties.get('highway', '')
     railway = properties.get('railway', '')
     aeroway = properties.get('aeroway', '')
     aerialway = properties.get('aerialway', '')
-    service = properties.get('service')
+    service = properties.get('service', '')
+    ne_type = properties.get('type', '')
 
     is_railway = railway in (
         'rail', 'tram', 'light_rail', 'narrow_guage', 'monorail')
 
-    if highway == 'motorway':
+    if (highway == 'motorway' or
+            ne_type in ('Major Highway', 'Beltway', 'Bypass')):
         sort_val += 44
     elif is_railway:
         sort_val += 43
-    elif highway == 'trunk':
+    elif highway == 'trunk' or ne_type == 'Secondary Highway':
         sort_val += 42
-    elif highway == 'primary':
+    elif highway == 'primary' or ne_type == 'Road':
         sort_val += 41
     elif highway == 'secondary' or aeroway == 'runway':
         sort_val += 40
-    elif highway == 'tertiary' or aeroway == 'taxiway':
+    elif highway == 'tertiary' or aeroway == 'taxiway' or ne_type == 'Track':
         sort_val += 39
     elif highway.endswith('_link'):
         sort_val += 38
-    elif highway in ('residential', 'unclassified', 'road', 'living_street'):
+    elif (highway in ('residential', 'unclassified', 'road', 'living_street')
+          or ne_type == 'Unknown'):
         sort_val += 37
     elif highway in ('unclassified', 'service', 'minor'):
         sort_val += 36
@@ -329,9 +332,9 @@ def road_sort_key(shape, properties, fid, zoom):
     elif aerialway:
         sort_val += 45
     else:
-        sort_val += 25
+        sort_val += 35
 
-    if is_railway and service is not None:
+    if is_railway and service:
         if service in ('spur', 'siding'):
             # make sort val more like residential, unclassified which
             # also come in at zoom 12
@@ -341,21 +344,18 @@ def road_sort_key(shape, properties, fid, zoom):
         else:
             sort_val -= 8
 
-    if highway == 'service' and service is not None:
+    if highway == 'service' and service:
         # sort alley, driveway, etc... under service
         sort_val -= 1
 
     if zoom >= 15:
         bridge = properties.get('bridge')
         tunnel = properties.get('tunnel')
-        if bridge in ('yes', 'true'):
+        if bridge in ('yes', 'true') or aerialway:
             sort_val += 40
         elif (tunnel in ('yes', 'true') or
               (railway == 'subway' and tunnel not in ('no', 'false'))):
-            sort_val -= 10
-
-        if aerialway:
-            sort_val += 30
+            sort_val -= 40
 
         # Explicit layer is clipped to [-5, 5] range. Note that
         # the layer, if present, will be a Float due to the
