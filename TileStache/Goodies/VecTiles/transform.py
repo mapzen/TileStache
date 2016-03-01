@@ -3084,7 +3084,14 @@ def csv_match_properties(ctx):
     if not os.path.isabs(csv_file):
         csv_file = os.path.join(ctx.config_file_path, csv_file)
 
-    matcher = _CSVMatcher(csv_file)
+    # the CSV matcher loads files from disk, which is a pretty expensive
+    # operation and we'd like that to happen as few times as possble, so
+    # we cache the matcher object across tile requests.
+    _cache_key = 'csv_match_properties:matcher'
+    matcher = ctx.cache.get(_cache_key)
+    if matcher is None:
+        matcher = _CSVMatcher(csv_file)
+        ctx.cache[_cache_key] = matcher
 
     def _type_cast(v):
         if target_value_type == 'int':
