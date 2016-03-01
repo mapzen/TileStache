@@ -18,6 +18,8 @@ from shapely.geometry.collection import GeometryCollection
 from util import to_float
 from sort import pois as sort_pois
 import re
+import csv
+import os.path
 
 
 feet_pattern = re.compile('([+-]?[0-9.]+)\'(?: *([+-]?[0-9.]+)")?')
@@ -3093,3 +3095,128 @@ def normalize_medical_kind(shape, properties, fid, zoom):
                 properties['specialty'] = specialty.split(';')
 
     return (shape, properties, fid)
+
+
+class _AnyMatcher(object):
+    def match(self, other):
+        return True
+
+
+class _NoneMatcher(object):
+    def match(self, other):
+        return other is None
+
+
+class _SomeMatcher(object):
+    def match(self, other):
+        return other is not None
+
+
+class _ExactMatcher(object):
+    def __init__(self, value):
+        self.value = value
+
+    def match(self, other):
+        return other == self.value
+
+
+class _SetMatcher(object):
+    def __init__(self, values):
+        self.values = values
+
+    def match(self, other):
+        return other in self.values
+
+
+class _CSVMatcher(object):
+    def __init__(self, csv_file):
+        keys = None
+        rows = []
+
+        self.static_any = _AnyMatcher()
+        self.static_none = _NoneMatcher()
+        self.static_some = _SomeMatcher()
+
+        with open(csv_file, 'r') as fh:
+            # CSV - allow whitespace after the comma
+            reader = csv.reader(fh, skipinitialspace=True)
+            for row in reader:
+                if keys is None:
+                    target_key = row.pop(-1)
+                    keys = row
+
+                else:
+                    target_val = row.pop(-1)
+                    row = [self._match_val(v) for v in row]
+                    rows.append((row, target_val))
+
+        self.keys = keys
+        self.rows = rows
+        self.target_key = target_key
+
+    def _match_val(self, v):
+        if v == '*':
+            return self.static_any
+        if v == '-':
+            return self.static_none
+        if v == '+':
+            return self.static_some
+        if ';' in v:
+            return _SetMatcher(set(v.split(';')))
+        return _ExactMatcher(v)
+
+    def match(self, properties):
+        vals = [properties.get(k) for k in self.keys]
+        for row, target_val in self.rows:
+            if all([a.match(b) for (a, b) in zip(row, vals)]):
+                return (self.target_key, target_val)
+
+        return None
+
+
+def csv_match_properties(ctx):
+    """
+    Add or update a property on all features which match properties which are
+    given as headings in a CSV file.
+    """
+
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    source_layer = ctx.params.get('source_layer')
+    start_zoom = ctx.params.get('start_zoom', 0)
+    end_zoom = ctx.params.get('end_zoom')
+    csv_file = ctx.params.get('csv_file')
+    target_value_type = ctx.params.get('target_value_type')
+
+    assert source_layer, 'csv_match_properties: missing source layer'
+    assert csv_file, 'csv_match_properties: missing CSV file'
+
+    if zoom < start_zoom:
+        return None
+
+    if end_zoom is not None and zoom > end_zoom:
+        return None
+
+    layer = _find_layer(feature_layers, source_layer)
+    if layer is None:
+        return None
+
+    # unless the path is absolute, make it relative to the config file
+    # location.
+    if not os.path.isabs(csv_file):
+        csv_file = os.path.join(ctx.config_file_path, csv_file)
+
+    matcher = _CSVMatcher(csv_file)
+
+    def _type_cast(v):
+        if target_value_type == 'int':
+            return int(v)
+        return v
+
+    for shape, props, fid in layer['features']:
+        m = matcher.match(props)
+        if m is not None:
+            k, v = m
+            props[k] = _type_cast(v)
+
+    return layer
