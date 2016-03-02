@@ -375,7 +375,7 @@ def road_sort_key(shape, properties, fid, zoom):
 
 
 def road_trim_properties(shape, properties, fid, zoom):
-    properties = _remove_properties(properties, 'bridge', 'layer', 'tunnel')
+    properties = _remove_properties(properties, 'bridge', 'tunnel')
     return shape, properties, fid
 
 
