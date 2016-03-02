@@ -2978,15 +2978,24 @@ class _AnyMatcher(object):
     def match(self, other):
         return True
 
+    def __repr__(self):
+        return "*"
+
 
 class _NoneMatcher(object):
     def match(self, other):
         return other is None
 
+    def __repr__(self):
+        return "-"
+
 
 class _SomeMatcher(object):
     def match(self, other):
         return other is not None
+
+    def __repr__(self):
+        return "+"
 
 
 class _ExactMatcher(object):
@@ -2996,6 +3005,9 @@ class _ExactMatcher(object):
     def match(self, other):
         return other == self.value
 
+    def __repr__(self):
+        return repr(self.value)
+
 
 class _SetMatcher(object):
     def __init__(self, values):
@@ -3004,10 +3016,28 @@ class _SetMatcher(object):
     def match(self, other):
         return other in self.values
 
+    def __repr__(self):
+        return repr(self.value)
+
+
+_KEY_TYPE_LOOKUP = {
+    'int': int,
+    'float': float,
+}
+
+def _parse_kt(key_type):
+    kt = key_type.split("::")
+
+    type_key = kt[1] if len(kt) > 1 else None
+    fn = _KEY_TYPE_LOOKUP.get(type_key, str)
+
+    return (kt[0], fn)
+
 
 class CSVMatcher(object):
     def __init__(self, fh):
         keys = None
+        types = []
         rows = []
 
         self.static_any = _AnyMatcher()
@@ -3019,27 +3049,32 @@ class CSVMatcher(object):
         for row in reader:
             if keys is None:
                 target_key = row.pop(-1)
-                keys = row
+                keys = []
+                for key_type in row:
+                    key, typ = _parse_kt(key_type)
+                    keys.append(key)
+                    types.append(typ)
 
             else:
                 target_val = row.pop(-1)
-                row = [self._match_val(v) for v in row]
+                for i in range(0, len(row)):
+                    row[i] = self._match_val(row[i], types[i])
                 rows.append((row, target_val))
 
         self.keys = keys
         self.rows = rows
         self.target_key = target_key
 
-    def _match_val(self, v):
+    def _match_val(self, v, typ):
         if v == '*':
             return self.static_any
         if v == '-':
             return self.static_none
         if v == '+':
             return self.static_some
-        if ';' in v:
+        if isinstance(v, str) and ';' in v:
             return _SetMatcher(set(v.split(';')))
-        return _ExactMatcher(v)
+        return _ExactMatcher(typ(v))
 
     def __call__(self, properties):
         vals = [properties.get(k) for k in self.keys]
