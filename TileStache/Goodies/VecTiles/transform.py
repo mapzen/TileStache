@@ -304,7 +304,7 @@ def road_sort_key(shape, properties, fid, zoom):
     ne_type = properties.get('type', '')
 
     is_railway = railway in (
-        'rail', 'tram', 'light_rail', 'narrow_guage', 'monorail')
+        'rail', 'tram', 'light_rail', 'narrow_gauge', 'monorail')
 
     if (highway == 'motorway' or
             ne_type in ('Major Highway', 'Beltway', 'Bypass')):
