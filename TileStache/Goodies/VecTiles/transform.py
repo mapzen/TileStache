@@ -18,6 +18,7 @@ from shapely.geometry.collection import GeometryCollection
 from util import to_float
 from sort import pois as sort_pois
 import re
+import csv
 
 
 feet_pattern = re.compile('([+-]?[0-9.]+)\'(?: *([+-]?[0-9.]+)")?')
@@ -303,7 +304,7 @@ def road_sort_key(shape, properties, fid, zoom):
     ne_type = properties.get('type', '')
 
     is_railway = railway in (
-        'rail', 'tram', 'light_rail', 'narrow_guage', 'monorail')
+        'rail', 'tram', 'light_rail', 'narrow_gauge', 'monorail')
 
     if (highway == 'motorway' or
             ne_type in ('Major Highway', 'Beltway', 'Bypass')):
@@ -374,7 +375,7 @@ def road_sort_key(shape, properties, fid, zoom):
 
 
 def road_trim_properties(shape, properties, fid, zoom):
-    properties = _remove_properties(properties, 'bridge', 'layer', 'tunnel')
+    properties = _remove_properties(properties, 'bridge', 'tunnel')
     return shape, properties, fid
 
 
@@ -1191,128 +1192,6 @@ def remap_deprecated_landuse_kinds(shape, properties, fid, zoom):
         if remapped_kind is not None:
             properties['kind'] = remapped_kind
 
-    return shape, properties, fid
-
-
-# explicit order for some kinds of landuse
-_landuse_sort_order = {
-    'aerodrome': 49,
-    'allotments': 83,
-    'amusement_ride': 97,
-    'animal': 92,
-    'apron': 51,
-    'aquarium': 46,
-    'artwork': 93,
-    'attraction': 94,
-    'aviary': 72,
-    'beach': 87,
-    'breakwater': 221,
-    'bridge': 226,
-    'carousel': 95,
-    'cemetery': 66,
-    'cinema': 69,
-    'college': 32,
-    'commercial': 35,
-    'common': 56,
-    'conservation': 24,
-    'cutline': 223,
-    'dike': 224,
-    'enclosure': 74,
-    'farm': 28,
-    'farmland': 29,
-    'farmyard': 61,
-    'footway': 100,
-    'forest': 30,
-    'fuel': 68,
-    'garden': 88,
-    'generator': 84,
-    'glacier': 12,
-    'golf_course': 47,
-    'grass': 78,
-    'groyne': 222,
-    'hanami': 86,
-    'hospital': 45,
-    'industrial': 23,
-    'land': 220,
-    'library': 70,
-    'maze': 85,
-    'meadow': 79,
-    'military': 37,
-    'national_park': 19,
-    'nature_reserve': 25,
-    'park or protected land': 17,
-    'park': 26,
-    'park': 33,
-    'parking': 64,
-    'pedestrian': 89,
-    'petting_zoo': 73,
-    'pier': 225,
-    'pitch': 91,
-    'place_of_worship': 65,
-    'plant': 77,
-    'playground': 90,
-    'prison': 38,
-    'protected_area': 18,
-    'quarry': 63,
-    'railway': 62,
-    'recreation_ground': 48,
-    'residential': 22,
-    'resort': 43,
-    'retail': 36,
-    'roller_coaster': 75,
-    'runway': 52,
-    'rural': 15,
-    'school': 67,
-    'scrub': 80,
-    'sports_centre': 54,
-    'stadium': 53,
-    'substation': 60,
-    'summer_toboggan': 76,
-    'taxiway': 50,
-    'theatre': 71,
-    'theme_park': 39,
-    'tower': 99,
-    'trail_riding_station': 44,
-    'university': 31,
-    'urban area': 13,
-    'urban': 14,
-    'village_green': 55,
-    'wastewater_plant': 57,
-    'water_slide': 96,
-    'water_works': 58,
-    'wetland': 81,
-    'wilderness_hut': 98,
-    'wildlife_park': 40,
-    'winery': 41,
-    'winter_sports': 27,
-    'wood': 82,
-    'works': 59,
-    'zoo': 42
-}
-
-
-# sets a key "order" on anything with a landuse kind
-# specified in the landuse sort order above. this is
-# to help with maintaining a consistent order across
-# post-processing steps in the server and drawing
-# steps on the client.
-def landuse_sort_key(shape, properties, fid, zoom):
-    kind = properties.get('kind')
-    
-    # land is at 10
-    # default to 11 for landuse if not in the lookup table
-    # (landuse lookup table starts at 12)
-    fallback_sort_key = 11
-    
-    if kind is not None:
-        key = _landuse_sort_order.get(kind)
-        if key is not None:
-            properties['sort_key'] = key
-        else:
-            properties['sort_key'] = fallback_sort_key
-    else:
-        properties['sort_key'] = fallback_sort_key
-    
     return shape, properties, fid
 
 
@@ -3093,3 +2972,155 @@ def normalize_medical_kind(shape, properties, fid, zoom):
                 properties['specialty'] = specialty.split(';')
 
     return (shape, properties, fid)
+
+
+class _AnyMatcher(object):
+    def match(self, other):
+        return True
+
+    def __repr__(self):
+        return "*"
+
+
+class _NoneMatcher(object):
+    def match(self, other):
+        return other is None
+
+    def __repr__(self):
+        return "-"
+
+
+class _SomeMatcher(object):
+    def match(self, other):
+        return other is not None
+
+    def __repr__(self):
+        return "+"
+
+
+class _ExactMatcher(object):
+    def __init__(self, value):
+        self.value = value
+
+    def match(self, other):
+        return other == self.value
+
+    def __repr__(self):
+        return repr(self.value)
+
+
+class _SetMatcher(object):
+    def __init__(self, values):
+        self.values = values
+
+    def match(self, other):
+        return other in self.values
+
+    def __repr__(self):
+        return repr(self.value)
+
+
+_KEY_TYPE_LOOKUP = {
+    'int': int,
+    'float': float,
+}
+
+def _parse_kt(key_type):
+    kt = key_type.split("::")
+
+    type_key = kt[1] if len(kt) > 1 else None
+    fn = _KEY_TYPE_LOOKUP.get(type_key, str)
+
+    return (kt[0], fn)
+
+
+class CSVMatcher(object):
+    def __init__(self, fh):
+        keys = None
+        types = []
+        rows = []
+
+        self.static_any = _AnyMatcher()
+        self.static_none = _NoneMatcher()
+        self.static_some = _SomeMatcher()
+
+        # CSV - allow whitespace after the comma
+        reader = csv.reader(fh, skipinitialspace=True)
+        for row in reader:
+            if keys is None:
+                target_key = row.pop(-1)
+                keys = []
+                for key_type in row:
+                    key, typ = _parse_kt(key_type)
+                    keys.append(key)
+                    types.append(typ)
+
+            else:
+                target_val = row.pop(-1)
+                for i in range(0, len(row)):
+                    row[i] = self._match_val(row[i], types[i])
+                rows.append((row, target_val))
+
+        self.keys = keys
+        self.rows = rows
+        self.target_key = target_key
+
+    def _match_val(self, v, typ):
+        if v == '*':
+            return self.static_any
+        if v == '-':
+            return self.static_none
+        if v == '+':
+            return self.static_some
+        if isinstance(v, str) and ';' in v:
+            return _SetMatcher(set(v.split(';')))
+        return _ExactMatcher(typ(v))
+
+    def __call__(self, properties):
+        vals = [properties.get(k) for k in self.keys]
+        for row, target_val in self.rows:
+            if all([a.match(b) for (a, b) in zip(row, vals)]):
+                return (self.target_key, target_val)
+
+        return None
+
+
+def csv_match_properties(ctx):
+    """
+    Add or update a property on all features which match properties which are
+    given as headings in a CSV file.
+    """
+
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    source_layer = ctx.params.get('source_layer')
+    start_zoom = ctx.params.get('start_zoom', 0)
+    end_zoom = ctx.params.get('end_zoom')
+    target_value_type = ctx.params.get('target_value_type')
+    matcher = ctx.resources.get('matcher')
+
+    assert source_layer, 'csv_match_properties: missing source layer'
+    assert matcher, 'csv_match_properties: missing matcher resource'
+
+    if zoom < start_zoom:
+        return None
+
+    if end_zoom is not None and zoom > end_zoom:
+        return None
+
+    layer = _find_layer(feature_layers, source_layer)
+    if layer is None:
+        return None
+
+    def _type_cast(v):
+        if target_value_type == 'int':
+            return int(v)
+        return v
+
+    for shape, props, fid in layer['features']:
+        m = matcher(props)
+        if m is not None:
+            k, v = m
+            props[k] = _type_cast(v)
+
+    return layer
