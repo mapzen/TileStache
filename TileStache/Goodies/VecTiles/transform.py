@@ -19,7 +19,6 @@ from util import to_float
 from sort import pois as sort_pois
 import re
 import csv
-import os.path
 
 
 feet_pattern = re.compile('([+-]?[0-9.]+)\'(?: *([+-]?[0-9.]+)")?')
@@ -3006,8 +3005,8 @@ class _SetMatcher(object):
         return other in self.values
 
 
-class _CSVMatcher(object):
-    def __init__(self, csv_file):
+class CSVMatcher(object):
+    def __init__(self, fh):
         keys = None
         rows = []
 
@@ -3015,18 +3014,17 @@ class _CSVMatcher(object):
         self.static_none = _NoneMatcher()
         self.static_some = _SomeMatcher()
 
-        with open(csv_file, 'r') as fh:
-            # CSV - allow whitespace after the comma
-            reader = csv.reader(fh, skipinitialspace=True)
-            for row in reader:
-                if keys is None:
-                    target_key = row.pop(-1)
-                    keys = row
+        # CSV - allow whitespace after the comma
+        reader = csv.reader(fh, skipinitialspace=True)
+        for row in reader:
+            if keys is None:
+                target_key = row.pop(-1)
+                keys = row
 
-                else:
-                    target_val = row.pop(-1)
-                    row = [self._match_val(v) for v in row]
-                    rows.append((row, target_val))
+            else:
+                target_val = row.pop(-1)
+                row = [self._match_val(v) for v in row]
+                rows.append((row, target_val))
 
         self.keys = keys
         self.rows = rows
@@ -3043,7 +3041,7 @@ class _CSVMatcher(object):
             return _SetMatcher(set(v.split(';')))
         return _ExactMatcher(v)
 
-    def match(self, properties):
+    def __call__(self, properties):
         vals = [properties.get(k) for k in self.keys]
         for row, target_val in self.rows:
             if all([a.match(b) for (a, b) in zip(row, vals)]):
@@ -3063,11 +3061,11 @@ def csv_match_properties(ctx):
     source_layer = ctx.params.get('source_layer')
     start_zoom = ctx.params.get('start_zoom', 0)
     end_zoom = ctx.params.get('end_zoom')
-    csv_file = ctx.params.get('csv_file')
     target_value_type = ctx.params.get('target_value_type')
+    matcher = ctx.resources.get('matcher')
 
     assert source_layer, 'csv_match_properties: missing source layer'
-    assert csv_file, 'csv_match_properties: missing CSV file'
+    assert matcher, 'csv_match_properties: missing matcher resource'
 
     if zoom < start_zoom:
         return None
@@ -3079,27 +3077,13 @@ def csv_match_properties(ctx):
     if layer is None:
         return None
 
-    # unless the path is absolute, make it relative to the config file
-    # location.
-    if not os.path.isabs(csv_file):
-        csv_file = os.path.join(ctx.config_file_path, csv_file)
-
-    # the CSV matcher loads files from disk, which is a pretty expensive
-    # operation and we'd like that to happen as few times as possble, so
-    # we cache the matcher object across tile requests.
-    _cache_key = 'csv_match_properties:matcher'
-    matcher = ctx.cache.get(_cache_key)
-    if matcher is None:
-        matcher = _CSVMatcher(csv_file)
-        ctx.cache[_cache_key] = matcher
-
     def _type_cast(v):
         if target_value_type == 'int':
             return int(v)
         return v
 
     for shape, props, fid in layer['features']:
-        m = matcher.match(props)
+        m = matcher(props)
         if m is not None:
             k, v = m
             props[k] = _type_cast(v)
