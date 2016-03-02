@@ -1053,16 +1053,29 @@ def _intercut_impl(intersect_func, feature_layers,
 #
 # returns a feature layer which is the base layer cut by the
 # cutting layer.
-def intercut(feature_layers, zoom, base_layer, cutting_layer,
-             attribute, target_attribute=None,
-             cutting_attrs=None,
-             keep_geom_type=True):
+def intercut(ctx):
+
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    base_layer = ctx.params.get('base_layer')
+    assert base_layer, \
+        'Parameter base_layer was missing from intercut config'
+    cutting_layer = ctx.params.get('cutting_layer')
+    assert cutting_layer, \
+        'Parameter cutting_layer was missing from intercut ' \
+        'config'
+    attribute = ctx.params.get('attribute')
     # sanity check on the availability of the cutting
     # attribute.
     assert attribute is not None, \
         'Parameter attribute to intercut was None, but ' + \
         'should have been an attribute name. Perhaps check ' + \
         'your configuration file and queries.'
+
+
+    target_attribute = ctx.params.get('target_attribute')
+    cutting_attrs = ctx.params.get('cutting_attrs')
+    keep_geom_type = ctx.params.get('keep_geom_type', True)
 
     return _intercut_impl(_intersect_cut, feature_layers,
         base_layer, cutting_layer, attribute,
@@ -1084,17 +1097,29 @@ def intercut(feature_layers, zoom, base_layer, cutting_layer,
 # returns a feature layer which is the base layer with
 # overlapping features having attributes projected from the
 # cutting layer.
-def overlap(feature_layers, zoom, base_layer, cutting_layer,
-            attribute, target_attribute=None,
-            cutting_attrs=None,
-            keep_geom_type=True,
-            min_fraction=0.8):
+def overlap(ctx):
+
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    base_layer = ctx.params.get('base_layer')
+    assert base_layer, \
+        'Parameter base_layer was missing from overlap config'
+    cutting_layer = ctx.params.get('cutting_layer')
+    assert cutting_layer, \
+        'Parameter cutting_layer was missing from overlap ' \
+        'config'
+    attribute = ctx.params.get('attribute')
     # sanity check on the availability of the cutting
     # attribute.
     assert attribute is not None, \
         'Parameter attribute to overlap was None, but ' + \
         'should have been an attribute name. Perhaps check ' + \
         'your configuration file and queries.'
+
+    target_attribute = ctx.params.get('target_attribute')
+    cutting_attrs = ctx.params.get('cutting_attrs')
+    keep_geom_type = ctx.params.get('keep_geom_type', True)
+    min_fraction = ctx.params.get('min_fraction', 0.8)
 
     return _intercut_impl(_intersect_overlap(min_fraction),
         feature_layers, base_layer, cutting_layer, attribute,
@@ -1109,7 +1134,14 @@ def overlap(feature_layers, zoom, base_layer, cutting_layer,
 # where the `maritime=yes` tag is set. we don't actually want
 # separate linestrings, we just want the `maritime=yes` attribute
 # on the first set of linestrings.
-def intracut(feature_layers, zoom, base_layer, attribute):
+def intracut(ctx):
+
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    base_layer = ctx.params.get('base_layer')
+    assert base_layer, \
+        'Parameter base_layer was missing from intracut config'
+    attribute = ctx.params.get('attribute')
     # sanity check on the availability of the cutting
     # attribute.
     assert attribute is not None, \
@@ -1464,14 +1496,7 @@ def _calculate_padded_bounds(factor, bounds):
     return Box(min_x - dx, min_y - dy, max_x + dx, max_y + dy)
 
 
-def exterior_boundaries(feature_layers, zoom,
-                        base_layer,
-                        new_layer_name=None,
-                        prop_transform=None,
-                        buffer_size=None,
-                        start_zoom=0,
-                        snap_tolerance=None,
-                        bounds=None):
+def exterior_boundaries(ctx):
     """
     create new fetures from the boundaries of polygons
     in the base layer, subtracting any sections of the
@@ -1501,6 +1526,18 @@ def exterior_boundaries(feature_layers, zoom,
     automatically by tilequeue - it does not have to be
     provided from the config.
     """
+
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    base_layer = ctx.params.get('base_layer')
+    assert base_layer, 'Missing base_layer parameter'
+    new_layer_name = ctx.params.get('new_layer_name')
+    prop_transform = ctx.params.get('prop_transform')
+    buffer_size = ctx.params.get('buffer_size')
+    start_zoom = ctx.params.get('start_zoom', 0)
+    snap_tolerance = ctx.params.get('snap_tolerance')
+    bounds = ctx.unpadded_bounds
+
     layer = None
 
     # don't start processing until the start zoom
@@ -1846,8 +1883,7 @@ def _orient(geom):
     return geom
 
 
-def admin_boundaries(feature_layers, zoom, base_layer,
-                     start_zoom=0):
+def admin_boundaries(ctx):
     """
     Given a layer with admin boundaries and inclusion polygons for
     land-based boundaries, attempts to output a set of oriented
@@ -1861,6 +1897,12 @@ def admin_boundaries(feature_layers, zoom, base_layer,
     clockwise around the polygon for which it is an outer (or
     clockwise if it was an inner).
     """
+
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    base_layer = ctx.params.get('base_layer')
+    assert base_layer, 'Parameter base_layer missing.'
+    start_zoom = ctx.params.get('start_zoom', 0)
 
     layer = None
 
@@ -1971,11 +2013,15 @@ def admin_boundaries(feature_layers, zoom, base_layer,
     return layer
 
 
-def generate_label_features(
-        feature_layers, zoom, source_layer=None, label_property_name=None,
-        label_property_value=None, new_layer_name=None, drop_keys=None):
+def generate_label_features(ctx):
 
+    feature_layers = ctx.feature_layers
+    source_layer = ctx.params.get('source_layer')
     assert source_layer, 'generate_label_features: missing source_layer'
+    label_property_name = ctx.params.get('label_property_name')
+    label_property_value = ctx.params.get('label_property_value')
+    new_layer_name = ctx.params.get('new_layer_name')
+    drop_keys = ctx.params.get('drop_keys')
 
     layer = _find_layer(feature_layers, source_layer)
     if layer is None:
@@ -2036,15 +2082,18 @@ def generate_label_features(
         return label_feature_layer
 
 
-def generate_address_points(
-        feature_layers, zoom, source_layer=None, start_zoom=0):
+def generate_address_points(ctx):
     """
     Generates address points from building polygons where there is an
     addr:housenumber tag on the building. Removes those tags from the
     building.
     """
 
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    source_layer = ctx.params.get('source_layer')
     assert source_layer, 'generate_address_points: missing source_layer'
+    start_zoom = ctx.params.get('start_zoom', 0)
 
     if zoom < start_zoom:
         return None
@@ -2128,16 +2177,19 @@ def parse_layer_as_float(shape, properties, fid, zoom):
     return shape, properties, fid
 
 
-def drop_features_where(
-        feature_layers, zoom, source_layer=None, start_zoom=0,
-        where=None):
+def drop_features_where(ctx):
     """
     Drop features entirely that match the particular "where"
     condition. Any feature properties are available to use, as well as
     the properties dict itself, called "properties" in the scope.
     """
 
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    source_layer = ctx.params.get('source_layer')
     assert source_layer, 'drop_features_where: missing source layer'
+    start_zoom = ctx.params.get('start_zoom', 0)
+    where = ctx.params.get('where')
     assert where, 'drop_features_where: missing where'
 
     if zoom < start_zoom:
@@ -2163,9 +2215,7 @@ def drop_features_where(
     return layer
 
 
-def _project_properties(
-        feature_layers, zoom, where, action, source_layer=None, start_zoom=0,
-        end_zoom=None):
+def _project_properties(ctx, action):
     """
     Project properties down to a subset of the existing properties based on a
     predicate `where` which returns true when the function `action` should be
@@ -2173,7 +2223,13 @@ def _project_properties(
     feature.
     """
 
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    where = ctx.params.get('where')
+    source_layer = ctx.params.get('source_layer')
     assert source_layer, '_project_properties: missing source layer'
+    start_zoom = ctx.params.get('start_zoom', 0)
+    end_zoom = ctx.params.get('end_zoom')
 
     if zoom < start_zoom:
         return None
@@ -2206,31 +2262,29 @@ def _project_properties(
     return layer
 
 
-def drop_properties(
-        feature_layers, zoom, source_layer=None, start_zoom=0,
-        properties=None, end_zoom=None, where=None):
+def drop_properties(ctx):
     """
     Drop all configured properties for features in source_layer
     """
 
+    properties = ctx.params.get('properties')
     assert properties, 'drop_properties: missing properties'
 
     def action(p):
         return _remove_properties(p, *properties)
 
-    return _project_properties(feature_layers, zoom, where, action,
-                               source_layer, start_zoom, end_zoom)
+    return _project_properties(ctx, action)
 
 
-def keep_properties(
-        feature_layers, zoom, source_layer=None, start_zoom=0,
-        properties=None, end_zoom=None, where=None):
+def keep_properties(ctx):
     """
     Keep only configured properties for features in source_layer
     """
 
+    properties = ctx.params.get('properties')
     assert properties, 'keep_properties: missing properties'
 
+    where = ctx.params.get('where')
     if where is not None:
         where = compile(where, 'queries.yaml', 'eval')
 
@@ -2242,8 +2296,7 @@ def keep_properties(
 
         return p in properties and (where is None or eval(where, {}, local))
 
-    return _project_properties(feature_layers, zoom, keep_property,
-                               source_layer, start_zoom, end_zoom)
+    return _project_properties(ctx, keep_property)
 
 
 def remove_zero_area(shape, properties, fid, zoom):
@@ -2335,10 +2388,7 @@ class _Deduplicator:
                 return False
 
 
-def remove_duplicate_features(
-        feature_layers, zoom, source_layer=None, source_layers=None,
-        start_zoom=0, property_keys=None, geometry_types=None,
-        min_distance=0.0, none_means_unique=True):
+def remove_duplicate_features(ctx):
     """
     Removes duplicate features from a layer, or set of layers. The
     definition of duplicate is anything which has the same values
@@ -2354,6 +2404,16 @@ def remove_duplicate_features(
     the first feature of those with the same value for the name
     and kind properties would be kept in the output.
     """
+
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    source_layer = ctx.params.get('source_layer')
+    source_layers = ctx.params.get('source_layers')
+    start_zoom = ctx.params.get('start_zoom', 0)
+    property_keys = ctx.params.get('property_keys')
+    geometry_types = ctx.params.get('geometry_types')
+    min_distance = ctx.params.get('min_distance', 0.0)
+    none_means_unique = ctx.params.get('none_means_unique', True)
 
     # can use either a single source layer, or multiple source
     # layers, but not both.
@@ -2432,9 +2492,7 @@ def remove_duplicate_features(
     return None
 
 
-def normalize_and_merge_duplicate_stations(
-        feature_layers, zoom, source_layer=None, start_zoom=0,
-        end_zoom=None):
+def normalize_and_merge_duplicate_stations(ctx):
     """
     Normalise station names by removing any parenthetical lines
     lists at the end (e.g: "Foo St (A, C, E)"). Parse this and
@@ -2450,7 +2508,12 @@ def normalize_and_merge_duplicate_stations(
     the station POIs to be out-of-order.
     """
 
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    source_layer = ctx.params.get('source_layer')
     assert source_layer, 'normalize_and_merge_duplicate_stations: missing source layer'
+    start_zoom = ctx.params.get('start_zoom', 0)
+    end_zoom = ctx.params.get('end_zoom')
 
     if zoom < start_zoom:
         return None
@@ -2560,9 +2623,7 @@ def _match_props(props, items_matching):
     return True
 
 
-def keep_n_features(
-        feature_layers, zoom, source_layer=None, start_zoom=0,
-        end_zoom=None, items_matching=None, max_items=None):
+def keep_n_features(ctx):
     """
     Keep only the first N features matching `items_matching`
     in the layer. This is primarily useful for removing
@@ -2576,7 +2637,14 @@ def keep_n_features(
     count is larger than `max_items`, dropping those features.
     """
 
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    source_layer = ctx.params.get('source_layer')
     assert source_layer, 'keep_n_features: missing source layer'
+    start_zoom = ctx.params.get('start_zoom', 0)
+    end_zoom = ctx.params.get('end_zoom')
+    items_matching = ctx.params.get('items_matching')
+    max_items = ctx.params.get('max_items')
 
     # leaving items_matching or max_items as None (or zero)
     # would mean that this filter would do nothing, so assume
@@ -2615,9 +2683,7 @@ def keep_n_features(
     return layer
 
 
-def rank_features(
-        feature_layers, zoom, source_layer=None, start_zoom=0,
-        items_matching=None, rank_key=None):
+def rank_features(ctx):
     """
     Enumerate the features matching `items_matching` and insert
     the rank as a property with the key `rank_key`. This is
@@ -2625,7 +2691,13 @@ def rank_features(
     only the top features, or de-emphasise the later features.
     """
 
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    source_layer = ctx.params.get('source_layer')
     assert source_layer, 'rank_features: missing source layer'
+    start_zoom = ctx.params.get('start_zoom', 0)
+    items_matching = ctx.params.get('items_matching')
+    rank_key = ctx.params.get('rank_key')
 
     # leaving items_matching or rank_key as None would mean
     # that this filter would do nothing, so assume that this
@@ -2666,9 +2738,7 @@ def normalize_aerialways(shape, props, fid, zoom):
     return shape, props, fid
 
 
-def numeric_min_filter(
-        feature_layers, zoom, source_layer=None, filters=None,
-        mode=None):
+def numeric_min_filter(ctx):
     """
     Keep only features which have properties equal or greater
     than the configured minima. These are in a dict per zoom
@@ -2686,7 +2756,12 @@ def numeric_min_filter(
     match.
     """
 
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    source_layer = ctx.params.get('source_layer')
     assert source_layer, 'rank_features: missing source layer'
+    filters = ctx.params.get('filters')
+    mode = ctx.params.get('mode')
 
     # assume missing filter is a config error.
     assert filters, 'numeric_min_filter: missing or empty filters dict'
@@ -2722,14 +2797,19 @@ def numeric_min_filter(
     return layer
 
 
-def copy_features(
-        feature_layers, zoom, source_layer=None, target_layer=None,
-        where=None, geometry_types=None):
+def copy_features(ctx):
     """
     Copy features matching _both_ the `where` selection and the
     `geometry_types` list to another layer. If the target layer
     doesn't exist, it is created.
     """
+
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    source_layer = ctx.params.get('source_layer')
+    target_layer = ctx.params.get('target_layer')
+    where = ctx.params.get('where')
+    geometry_types = ctx.params.get('geometry_types')
 
     assert source_layer, 'copy_features: source layer not configured'
     assert target_layer, 'copy_features: target layer not configured'
@@ -2779,8 +2859,7 @@ def make_representative_point(shape, properties, fid, zoom):
     return shape, properties, fid
 
 
-def remove_abandoned_pistes(
-        feature_layers, zoom, source_layer=None, start_zoom=0):
+def remove_abandoned_pistes(ctx):
     """
     Removes features tagged as abandoned pistes.
 
@@ -2792,6 +2871,11 @@ def remove_abandoned_pistes(
     have filtered out all the 'yes' values, meaning that it conveys no useful
     information any more.
     """
+
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    source_layer = ctx.params.get('source_layer')
+    start_zoom = ctx.params.get('start_zoom', 0)
 
     assert source_layer, 'remove_abandoned_pistes: missing source layer'
 
@@ -2863,9 +2947,7 @@ def normalize_leisure_kind(shape, properties, fid, zoom):
     return shape, properties, fid
 
 
-def merge_features(
-        feature_layers, zoom, source_layer=None, start_zoom=0,
-        end_zoom=None):
+def merge_features(ctx):
     """
     Merge (linear) features with the same properties together, attempting to
     make the resulting geometry as large as possible. Note that this will
@@ -2874,6 +2956,12 @@ def merge_features(
     At the moment, only merging for linear features is implemented, although
     it would be possible to extend to other geometry types.
     """
+
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    source_layer = ctx.params.get('source_layer')
+    start_zoom = ctx.params.get('start_zoom', 0)
+    end_zoom = ctx.params.get('end_zoom')
 
     assert source_layer, 'merge_features: missing source layer'
 
