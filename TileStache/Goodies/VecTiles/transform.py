@@ -3020,10 +3020,55 @@ class _SetMatcher(object):
         return repr(self.value)
 
 
+class _GreaterThanEqualMatcher(object):
+    def __init__(self, value):
+        self.value = value
+
+    def match(self, other):
+        return other >= self.value
+
+    def __repr__(self):
+        return '>=%r' % self.value
+
+
+class _GreaterThanMatcher(object):
+    def __init__(self, value):
+        self.value = value
+
+    def match(self, other):
+        return other > self.value
+
+    def __repr__(self):
+        return '>%r' % self.value
+
+
+class _LessThanEqualMatcher(object):
+    def __init__(self, value):
+        self.value = value
+
+    def match(self, other):
+        return other <= self.value
+
+    def __repr__(self):
+        return '<=%r' % self.value
+
+
+class _LessThanMatcher(object):
+    def __init__(self, value):
+        self.value = value
+
+    def match(self, other):
+        return other < self.value
+
+    def __repr__(self):
+        return '<%r' % self.value
+
+
 _KEY_TYPE_LOOKUP = {
     'int': int,
     'float': float,
 }
+
 
 def _parse_kt(key_type):
     kt = key_type.split("::")
@@ -3074,10 +3119,28 @@ class CSVMatcher(object):
             return self.static_some
         if isinstance(v, str) and ';' in v:
             return _SetMatcher(set(v.split(';')))
+        if v.startswith('>='):
+            assert len(v) > 2, 'Invalid >= matcher'
+            return _GreaterThanEqualMatcher(typ(v[2:]))
+        if v.startswith('<='):
+            assert len(v) > 2, 'Invalid <= matcher'
+            return _LessThanEqualMatcher(typ(v[2:]))
+        if v.startswith('>'):
+            assert len(v) > 1, 'Invalid > matcher'
+            return _GreaterThanMatcher(typ(v[1:]))
+        if v.startswith('<'):
+            assert len(v) > 1, 'Invalid > matcher'
+            return _LessThanMatcher(typ(v[1:]))
         return _ExactMatcher(typ(v))
 
-    def __call__(self, properties):
-        vals = [properties.get(k) for k in self.keys]
+    def __call__(self, properties, zoom):
+        vals = []
+        for key in self.keys:
+            # NOTE zoom is special cased
+            if key == 'zoom':
+                vals.append(zoom)
+            else:
+                vals.append(key)
         for row, target_val in self.rows:
             if all([a.match(b) for (a, b) in zip(row, vals)]):
                 return (self.target_key, target_val)
@@ -3118,7 +3181,7 @@ def csv_match_properties(ctx):
         return v
 
     for shape, props, fid in layer['features']:
-        m = matcher(props)
+        m = matcher(props, zoom)
         if m is not None:
             k, v = m
             props[k] = _type_cast(v)
