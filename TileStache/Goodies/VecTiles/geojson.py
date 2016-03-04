@@ -12,7 +12,9 @@ float_pat = compile(r'^-?\d+\.\d+(e-?\d+)?$')
 charfloat_pat = compile(r'^[\[,\,]-?\d+\.\d+(e-?\d+)?$')
 
 # floating point lat/lon precision for each zoom level, good to ~1/4 pixel.
-precisions = [int(ceil(log(1<<zoom + 8+2) / log(10)) - 2) for zoom in range(23)]
+precisions = [int(ceil(log(1<<zoom + 8+2) / log(10)) - 2) for zoom in range(17)]
+# at z16, need to be more precise for metatiling
+precisions[16] = 8
 
 def mercator((x, y)):
     ''' Project an (x, y) tuple to spherical mercator.
