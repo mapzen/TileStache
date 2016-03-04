@@ -3138,9 +3138,10 @@ class CSVMatcher(object):
         for key in self.keys:
             # NOTE zoom is special cased
             if key == 'zoom':
-                vals.append(zoom)
+                val = zoom
             else:
-                vals.append(key)
+                val = properties.get('key')
+            vals.append(val)
         for row, target_val in self.rows:
             if all([a.match(b) for (a, b) in zip(row, vals)]):
                 return (self.target_key, target_val)
