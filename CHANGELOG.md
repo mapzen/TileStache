@@ -1,3 +1,12 @@
+v0.8.0
+------
+* Allow code in `drop_features_where` function.
+* Add bounding box clipping to exterior boundaries transform to improve water boundary performance.
+* Add kind normalisation functions for social facilities and medical features.
+* Update road sort key value function.
+* Add CSV spreadsheet property matching functions to provide sort_key value lookups for landuse, roads, and most other layers.
+* Use more precision for json formatter on z16 and higher.
+
 v0.7.0
 ------
 
