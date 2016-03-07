@@ -17,6 +17,7 @@ from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry.collection import GeometryCollection
 from util import to_float
 from sort import pois as sort_pois
+from sys import float_info
 import re
 import csv
 
@@ -1692,6 +1693,7 @@ def _linemerge(geom):
     function.
     """
     geom_type = geom.type
+    result_geom = None
 
     if geom_type == 'GeometryCollection':
         # collect together everything line-like from the geometry
@@ -1702,16 +1704,31 @@ def _linemerge(geom):
             if not line.is_empty:
                 lines.append(line)
 
-        return linemerge(lines) if lines else MultiLineString([])
+        result_geom = linemerge(lines) if lines else None
 
     elif geom_type == 'LineString':
-        return geom
+        result_geom = geom
 
     elif geom_type == 'MultiLineString':
-        return linemerge(geom)
+        result_geom = linemerge(geom)
 
     else:
-        return MultiLineString([])
+        result_geom = None
+
+    if result_geom is not None:
+        # simplify with very small tolerance to remove duplicate points.
+        # almost duplicate or nearly colinear points can occur due to
+        # numerical round-off or precision in the intersection algorithm, and
+        # this should help get rid of those. see also:
+        # http://lists.gispython.org/pipermail/community/2014-January/003236.html
+        #
+        # the tolerance here is hard-coded to a fraction of the coordinate
+        # magnitude. there isn't a perfect way to figure out what this tolerance
+        # should be, so this may require some tweaking.
+        epsilon = max(map(abs, result_geom.bounds)) * float_info.epsilon * 1000
+        result_geom = result_geom.simplify(epsilon, True)
+
+    return result_geom if result_geom else MultiLineString([])
 
 
 def _orient(geom):
