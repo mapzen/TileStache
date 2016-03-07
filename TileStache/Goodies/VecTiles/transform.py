@@ -131,7 +131,7 @@ road_kind_major_road = set(('trunk', 'trunk_link', 'primary', 'primary_link',
 road_kind_path = set(('footpath', 'track', 'footway', 'steps', 'pedestrian',
                       'path', 'cycleway'))
 road_kind_rail = set(('rail', 'tram', 'light_rail', 'narrow_gauge',
-                      'monorail', 'subway'))
+                      'monorail', 'subway', 'funicular'))
 road_kind_aerialway = set(('gondola', 'cable_car', 'chair_lift', 'drag_lift',
                            'platter', 't-bar', 'goods', 'magic_carpet',
                            'rope_tow', 'yes', 'zip_line', 'j-bar', 'unknown',
