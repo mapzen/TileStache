@@ -3256,3 +3256,26 @@ def update_parenthetical_properties(ctx):
 
     layer['features'] = new_features
     return layer
+
+
+def add_state_to_stations(shape, properties, fid, zoom):
+    """
+    If the feature is a station, and it has a state tag, then move that
+    tag to its properties.
+    """
+
+    kind = properties.get('kind')
+    if kind not in ('station'):
+        return shape, properties, fid
+
+    tags = properties.get('tags')
+    if not tags:
+        return shape, properties, fid
+
+    state = tags.get('state')
+    if not state:
+        return shape, properties, fid
+
+    properties['state'] = state
+
+    return shape, properties, fid
