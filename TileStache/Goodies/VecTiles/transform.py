@@ -3205,3 +3205,54 @@ def csv_match_properties(ctx):
             props[k] = _type_cast(v)
 
     return layer
+
+
+def update_parenthetical_properties(ctx):
+    """
+    If a feature's name ends with a set of values in parens, update
+    its kind and increase the min_zoom appropriately.
+    """
+
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    source_layer = ctx.params.get('source_layer')
+    start_zoom = ctx.params.get('start_zoom', 0)
+    end_zoom = ctx.params.get('end_zoom')
+    parenthetical_values = ctx.params.get('values')
+    target_min_zoom = ctx.params.get('target_min_zoom')
+    drop_below_zoom = ctx.params.get('drop_below_zoom')
+
+    assert parenthetical_values is not None, \
+        'update_parenthetical_properties: missing values'
+    assert target_min_zoom is not None, \
+        'update_parenthetical_properties: missing target_min_zoom'
+
+    if zoom < start_zoom:
+        return None
+
+    if end_zoom is not None and zoom > end_zoom:
+        return None
+
+    layer = _find_layer(feature_layers, source_layer)
+    if layer is None:
+        return None
+
+    new_features = []
+    for shape, props, fid in layer['features']:
+        name = props.get('name', '')
+        if not name:
+            new_features.append((shape, props, fid))
+            continue
+
+        keep = True
+        for value in parenthetical_values:
+            if name.endswith('(%s)' % value):
+                props['kind'] = value
+                props['min_zoom'] = target_min_zoom
+                if drop_below_zoom and zoom < drop_below_zoom:
+                    keep = False
+        if keep:
+            new_features.append((shape, props, fid))
+
+    layer['features'] = new_features
+    return layer
