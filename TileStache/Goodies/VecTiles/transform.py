@@ -3258,7 +3258,7 @@ def update_parenthetical_properties(ctx):
     return layer
 
 
-def add_construction_state_to_stations(shape, properties, fid, zoom):
+def add_state_to_stations(shape, properties, fid, zoom):
     """
     If the feature is a station, and it has a state tag, then move that
     tag to its properties.
