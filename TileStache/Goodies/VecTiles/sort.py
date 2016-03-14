@@ -46,20 +46,14 @@ def _by_population(feature):
     return default_value if population is None else population
 
 
-def _by_transit_routes(feature):
+def _by_transit_score(feature):
     wkb, props, fid = feature
-
-    num_lines = 0
-    transit_routes = props.get('transit_routes')
-    if transit_routes is not None:
-        num_lines = len(transit_routes)
-
-    return num_lines
+    return props.get('mz_transit_score', 0)
 
 
-def _sort_by_transit_routes_then_feature_id(features):
+def _sort_by_transit_score_then_feature_id(features):
     features.sort(key=_by_feature_id)
-    features.sort(key=_by_transit_routes, reverse=True)
+    features.sort(key=_by_transit_score, reverse=True)
     return features
 
 
@@ -89,7 +83,7 @@ def places(features, zoom):
 
 
 def pois(features, zoom):
-    return _sort_by_transit_routes_then_feature_id(features)
+    return _sort_by_transit_score_then_feature_id(features)
 
 
 def roads(features, zoom):
