@@ -2518,8 +2518,8 @@ def normalize_station_properties(ctx):
         kind = props.get('kind')
 
         # get rid of temporaries
-        #props.pop('mz_transit_root_relation_id', None)
-        #props.pop('mz_transit_score', None)
+        props.pop('mz_transit_root_relation_id', None)
+        props.pop('mz_transit_score', None)
 
         if kind == 'station':
             # remove anything that has an empty *_routes
