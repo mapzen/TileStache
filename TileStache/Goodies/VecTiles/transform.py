@@ -2381,17 +2381,16 @@ def remove_duplicate_features(ctx):
     return None
 
 
-def normalize_and_merge_duplicate_stations(ctx):
+def merge_duplicate_stations(ctx):
     """
     Normalise station names by removing any parenthetical lines
     lists at the end (e.g: "Foo St (A, C, E)"). Parse this and
-    use it to replace the `transit_routes` list if that is empty
+    use it to replace the `subway_routes` list if that is empty
     or isn't present.
 
-    Use the name, now appropriately trimmed, to merge station
-    POIs together, unioning their transit routes.
-
-    Stations with empty transit_routes have that property removed.
+    Use the root relation ID, calculated as part of the exploration of the
+    transit relations, plus the name, now appropriately trimmed, to merge
+    station POIs together, unioning their subway routes.
 
     Finally, re-sort the features in case the merging has caused
     the station POIs to be out-of-order.
@@ -2432,28 +2431,33 @@ def normalize_and_merge_duplicate_stations(ctx):
             # list of lines if we haven't already got that info.
             m = station_pattern.match(name)
 
-            transit_routes = props.get('transit_routes', [])
+            subway_routes = props.get('subway_routes', [])
+            transit_route_relation_id = props.get('mz_transit_root_relation_id')
 
             if m:
                 # if the lines aren't present or are empty
-                if not transit_routes:
+                if not subway_routes:
                     lines = m.group(2).split(',')
-                    transit_routes = [x.strip() for x in lines]
-                    props['transit_routes'] = transit_routes
+                    subway_routes = [x.strip() for x in lines]
+                    props['subway_routes'] = subway_routes
 
                 # update name so that it doesn't contain all the
                 # lines.
                 name = m.group(1).strip()
                 props['name'] = name
 
-            seen_idx = seen_stations.get(name)
+            # if the root relation ID is available, then use that for
+            # identifying duplicates. otherwise, use the name.
+            key = transit_route_relation_id or name
+
+            seen_idx = seen_stations.get(key)
             if seen_idx is None:
-                seen_stations[name] = len(new_features)
+                seen_stations[key] = len(new_features)
 
                 # ensure that transit routes is present and is of
                 # list type for when we append to it later if we
                 # find a duplicate.
-                props['transit_routes'] = transit_routes
+                props['subway_routes'] = subway_routes
                 new_features.append(feature)
 
             else:
@@ -2463,24 +2467,14 @@ def normalize_and_merge_duplicate_stations(ctx):
                 seen_props = new_features[seen_idx][1]
 
                 # make sure routes are unique
-                unique_transit_routes = set(transit_routes) & \
-                    set(seen_props['transit_routes'])
-                seen_props['transit_routes'] = list(unique_transit_routes)
+                unique_subway_routes = set(subway_routes) | \
+                    set(seen_props['subway_routes'])
+                seen_props['subway_routes'] = list(unique_subway_routes)
 
         else:
             # not a station, or name is missing - we can't
             # de-dup these.
             new_features.append(feature)
-
-    # remove anything that has an empty transit_routes
-    # list, as this most likely indicates that we were
-    # not able to _detect_ what lines it's part of, as
-    # it seems unlikely that a station would be part of
-    # _zero_ routes.
-    for shape, props, fid in new_features:
-        transit_routes = props.pop('transit_routes', [])
-        if transit_routes:
-            props['transit_routes'] = transit_routes
 
     # might need to re-sort, if we merged any stations:
     # removing duplicates would have changed the number
@@ -2489,6 +2483,63 @@ def normalize_and_merge_duplicate_stations(ctx):
         sort_pois(new_features, zoom)
 
     layer['features'] = new_features
+    return layer
+
+
+def normalize_station_properties(ctx):
+    """
+    Normalise station properties by removing some which are only used during
+    importance calculation. Stations may also have route information, which may
+    appear as empty lists. These are removed. Also, flags are put on the station
+    to indicate what kind(s) of station it might be.
+    """
+
+    feature_layers = ctx.feature_layers
+    zoom = ctx.tile_coord.zoom
+    source_layer = ctx.params.get('source_layer')
+    assert source_layer, 'normalize_and_merge_duplicate_stations: missing source layer'
+    start_zoom = ctx.params.get('start_zoom', 0)
+    end_zoom = ctx.params.get('end_zoom')
+
+    if zoom < start_zoom:
+        return None
+
+    # we probably don't want to do this at higher zooms (e.g: 17 &
+    # 18), even if there are a bunch of stations very close
+    # together.
+    if end_zoom is not None and zoom > end_zoom:
+        return None
+
+    layer = _find_layer(feature_layers, source_layer)
+    if layer is None:
+        return None
+
+    for shape, props, fid in layer['features']:
+        kind = props.get('kind')
+
+        # get rid of temporaries
+        root_relation_id = props.pop('mz_transit_root_relation_id', None)
+        props.pop('mz_transit_score', None)
+
+        if kind == 'station':
+            # remove anything that has an empty *_routes
+            # list, as this most likely indicates that we were
+            # not able to _detect_ what lines it's part of, as
+            # it seems unlikely that a station would be part of
+            # _zero_ routes.
+            for typ in ['train', 'subway', 'light_rail', 'tram']:
+                prop_name = '%s_routes' % typ
+                routes = props.pop(prop_name, [])
+                if routes:
+                    props[prop_name] = routes
+                    props['is_%s' % typ] = True
+
+            # if the station has a root relation ID then include
+            # that as a way for the client to link together related
+            # features.
+            if root_relation_id:
+                props['root_relation_id'] = root_relation_id
+
     return layer
 
 
