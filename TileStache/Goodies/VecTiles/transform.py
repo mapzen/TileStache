@@ -2518,7 +2518,7 @@ def normalize_station_properties(ctx):
         kind = props.get('kind')
 
         # get rid of temporaries
-        props.pop('mz_transit_root_relation_id', None)
+        root_relation_id = props.pop('mz_transit_root_relation_id', None)
         props.pop('mz_transit_score', None)
 
         if kind == 'station':
@@ -2533,6 +2533,12 @@ def normalize_station_properties(ctx):
                 if routes:
                     props[prop_name] = routes
                     props['is_%s' % typ] = True
+
+            # if the station has a root relation ID then include
+            # that as a way for the client to link together related
+            # features.
+            if root_relation_id:
+                props['root_relation_id'] = root_relation_id
 
     return layer
 
