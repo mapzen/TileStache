@@ -1170,32 +1170,6 @@ def intracut(ctx):
     return base
 
 
-# map from old or deprecated kind value to the value that we want
-# it to be.
-_deprecated_landuse_kinds = {
-    'station': 'substation',
-    'sub_station': 'substation'
-}
-
-
-def remap_deprecated_landuse_kinds(shape, properties, fid, zoom):
-    """
-    some landuse kinds are deprecated, or can be coalesced down to
-    a single value. this filter implements that by remapping kind
-    values.
-    """
-
-    original_kind = properties.get('kind')
-
-    if original_kind is not None:
-        remapped_kind = _deprecated_landuse_kinds.get(original_kind)
-
-        if remapped_kind is not None:
-            properties['kind'] = remapped_kind
-
-    return shape, properties, fid
-
-
 # place kinds, as used by OSM, mapped to their rough
 # scale_ranks so that we can provide a defaulted,
 # non-curated scale_rank / min_zoom value.
