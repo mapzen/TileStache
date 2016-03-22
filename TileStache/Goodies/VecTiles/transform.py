@@ -2842,6 +2842,33 @@ def add_iata_code_to_airports(shape, properties, fid, zoom):
     return shape, properties, fid
 
 
+def add_uic_ref(shape, properties, fid, zoom):
+    """
+    If the feature has a valid uic_ref tag (7 integers), then move it
+    to its properties.
+    """
+
+    tags = properties.get('tags')
+    if not tags:
+        return shape, properties, fid
+
+    uic_ref = tags.get('uic_ref')
+    if not uic_ref:
+        return shape, properties, fid
+
+    uic_ref = uic_ref.strip()
+    if len(uic_ref) != 7:
+        return shape, properties, fid
+
+    try:
+        uic_ref_int = int(uic_ref)
+    except ValueError:
+        return shape, properties, fid
+    else:
+        properties['uic_ref'] = uic_ref_int
+        return shape, properties, fid
+
+
 def normalize_leisure_kind(shape, properties, fid, zoom):
     """
     Normalise the various ways of representing fitness POIs to a
