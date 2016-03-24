@@ -1,3 +1,15 @@
+v0.9.0
+------
+* After merging, simplify with a very small tolerance to remove duplicate and almost-colinear points
+* Add transform to update parenthetical properties
+* Add ability to drop parenthetical features below some given zoom level
+* Add function to add construction state to stations
+* Adjust tile rank score for stations to take into account the different types of routes
+* Remove temporary properties which shouldn't be public
+* Add 'root_relation_id' for linking related features together in a site or public transport 'stop area' or 'stop area group'
+* Remove now unused landuse kind mapping transform
+* Add uic_ref transform
+
 v0.8.0
 ------
 * Allow code in `drop_features_where` function.
