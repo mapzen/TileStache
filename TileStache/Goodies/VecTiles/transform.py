@@ -1436,6 +1436,9 @@ def exterior_boundaries(ctx):
             self.geom = geom
             self.area = area
             self._geom = geom._geom
+            # STRtree started filtering out empty geoms at some version, so
+            # we need to proxy the is_empty property.
+            self.is_empty = geom.is_empty
 
     # create an index so that we can efficiently find the
     # polygons intersecting the 'current' one. Note that
