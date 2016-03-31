@@ -446,6 +446,18 @@ def water_tunnel(shape, properties, fid, zoom):
     return shape, properties, fid
 
 
+def admin_level_as_int(shape, properties, fid, zoom):
+    admin_level_str = properties.pop('admin_level', None)
+    if admin_level_str is None:
+        return shape, properties, fid
+    try:
+        admin_level_int = int(admin_level_str)
+    except ValueError:
+        return shape, properties, fid
+    properties['admin_level'] = admin_level_int
+    return shape, properties, fid
+
+
 boundary_admin_level_mapping = {
     2: 'country',
     4: 'state',
@@ -455,6 +467,8 @@ boundary_admin_level_mapping = {
 
 
 def boundary_kind(shape, properties, fid, zoom):
+    # assumes that the admin_level_int transform is run first
+
     kind = properties.get('kind')
     if kind:
         return shape, properties, fid
@@ -467,14 +481,14 @@ def boundary_kind(shape, properties, fid, zoom):
         properties['kind'] = 'aboriginal_lands'
         return shape, properties, fid
 
-    admin_level_str = properties.get('admin_level')
-    if admin_level_str is None:
+    admin_level = properties.get('admin_level', None)
+    if admin_level is None:
         return shape, properties, fid
-    try:
-        admin_level_int = int(admin_level_str)
-    except ValueError:
-        return shape, properties, fid
-    kind = boundary_admin_level_mapping.get(admin_level_int)
+
+    assert isinstance(admin_level, int), \
+        'boundary_kind: expected admin_level to already be an int'
+
+    kind = boundary_admin_level_mapping.get(admin_level)
     if kind:
         properties['kind'] = kind
     return shape, properties, fid
