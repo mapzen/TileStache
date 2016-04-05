@@ -128,7 +128,7 @@ road_kind_highway = set(('motorway', 'motorway_link'))
 road_kind_major_road = set(('trunk', 'trunk_link', 'primary', 'primary_link',
                             'secondary', 'secondary_link',
                             'tertiary', 'tertiary_link'))
-road_kind_path = set(('footpath', 'track', 'footway', 'steps', 'pedestrian',
+road_kind_path = set(('track', 'footway', 'steps', 'pedestrian',
                       'path', 'cycleway'))
 road_kind_rail = set(('rail', 'tram', 'light_rail', 'narrow_gauge',
                       'monorail', 'subway', 'funicular'))
@@ -325,7 +325,7 @@ def road_sort_key(shape, properties, fid, zoom):
     elif (highway in ('residential', 'unclassified', 'road', 'living_street')
           or ne_type == 'Unknown'):
         sort_val += 60
-    elif highway in ('service', 'minor'):
+    elif highway in ('service'):
         sort_val += 58
     elif aerialway in ('gondola', 'cable_car'):
         sort_val += 92
