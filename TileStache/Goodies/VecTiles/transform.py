@@ -458,49 +458,6 @@ def admin_level_as_int(shape, properties, fid, zoom):
     return shape, properties, fid
 
 
-boundary_admin_level_mapping = {
-    2: 'country',
-    4: 'state',
-    6: 'county',
-    8: 'municipality',
-}
-
-
-def boundary_kind(shape, properties, fid, zoom):
-    # assumes that the admin_level_int transform is run first
-
-    kind = properties.get('kind')
-    if kind:
-        return shape, properties, fid
-
-    # if the boundary is tagged as being that of a first nations
-    # state then skip the rest of the kind logic, regardless of
-    # the admin_level (see mapzen/vector-datasource#284).
-    boundary_type = properties.get('boundary_type')
-    if boundary_type == 'aboriginal_lands':
-        properties['kind'] = 'aboriginal_lands'
-        return shape, properties, fid
-
-    admin_level = properties.get('admin_level', None)
-    if admin_level is None:
-        return shape, properties, fid
-
-    assert isinstance(admin_level, int), \
-        'boundary_kind: expected admin_level to already be an int'
-
-    kind = boundary_admin_level_mapping.get(admin_level)
-    if kind:
-        properties['kind'] = kind
-    return shape, properties, fid
-
-
-def boundary_trim_properties(shape, properties, fid, zoom):
-    properties = _remove_properties(
-        properties,
-        'boundary_type')
-    return shape, properties, fid
-
-
 def tags_create_dict(shape, properties, fid, zoom):
     tags_hstore = properties.get('tags')
     if tags_hstore:
