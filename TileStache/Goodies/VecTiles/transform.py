@@ -193,21 +193,6 @@ def remove_feature_id(shape, properties, fid, zoom):
     return shape, properties, None
 
 
-def building_kind(shape, properties, fid, zoom):
-    kind = properties.get('kind')
-    if kind:
-        return shape, properties, fid
-    building = _coalesce(properties, 'building:part', 'building')
-    if building:
-        if building != 'yes':
-            kind = building
-        else:
-            kind = 'building'
-    if kind:
-        properties['kind'] = kind
-    return shape, properties, fid
-
-
 def building_height(shape, properties, fid, zoom):
     height = _building_calc_height(
         properties.get('height'), properties.get('building:levels'),
