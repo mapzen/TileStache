@@ -13,16 +13,16 @@ def decode(file):
     return data # print data or write to file?
 
 
-def encode(file, features, coord, layer_name=''):
+def encode(file, features, coord, bounds, layer_name=''):
     layers = []
 
     layers.append(get_feature_layer(layer_name, features))
 
-    data = mapbox_vector_tile.encode(layers)
+    data = mapbox_vector_tile.encode(layers, quantize_bounds=bounds)
     file.write(data)
 
 
-def merge(file, feature_layers, coord):
+def merge(file, feature_layers, coord, bounds):
     '''
     Retrieve a list of mapbox vector tile responses and merge them into one.
 
@@ -33,7 +33,7 @@ def merge(file, feature_layers, coord):
     for layer in feature_layers:
         layers.append(get_feature_layer(layer['name'], layer['features']))
 
-    data = mapbox_vector_tile.encode(layers)
+    data = mapbox_vector_tile.encode(layers, quantize_bounds=bounds)
     file.write(data)
 
 
