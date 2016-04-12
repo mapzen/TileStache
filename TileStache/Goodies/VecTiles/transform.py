@@ -171,6 +171,11 @@ def _road_kind(properties):
     man_made = properties.get('man_made')
     if man_made == 'pier':
         return 'path'
+    tags = properties.get('tags')
+    if tags:
+        whitewater = tags.get('whitewater')
+        if whitewater == 'portage_way':
+            return 'portage_way'
     return 'minor_road'
 
 
