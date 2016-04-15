@@ -1581,6 +1581,21 @@ def _linemerge(geom):
         epsilon = max(map(abs, result_geom.bounds)) * float_info.epsilon * 1000
         result_geom = result_geom.simplify(epsilon, True)
 
+        result_geom_type = result_geom.type
+        # the geometry may still have invalid or repeated points if it has zero
+        # length segments, so remove anything where the length is less than
+        # epsilon.
+        if result_geom_type == 'LineString':
+            if result_geom.length < epsilon:
+                result_geom = None
+
+        elif result_geom_type == 'MultiLineString':
+            parts = []
+            for line in result_geom.geoms:
+                if line.length >= epsilon:
+                    parts.append(line)
+            result_geom = MultiLineString(parts)
+
     return result_geom if result_geom else MultiLineString([])
 
 
