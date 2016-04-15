@@ -124,61 +124,6 @@ def _building_calc_height(height_val, levels_val, levels_calc_fn):
     return levels
 
 
-road_kind_highway = set(('motorway', 'motorway_link'))
-road_kind_major_road = set(('trunk', 'trunk_link', 'primary', 'primary_link',
-                            'secondary', 'secondary_link',
-                            'tertiary', 'tertiary_link'))
-road_kind_path = set(('track', 'footway', 'steps', 'pedestrian',
-                      'path', 'cycleway'))
-road_kind_rail = set(('rail', 'tram', 'light_rail', 'narrow_gauge',
-                      'monorail', 'subway', 'funicular'))
-road_kind_aerialway = set(('gondola', 'cable_car', 'chair_lift', 'drag_lift',
-                           'platter', 't-bar', 'goods', 'magic_carpet',
-                           'rope_tow', 'yes', 'zip_line', 'j-bar', 'unknown',
-                           'mixed_lift', 'canopy', 'cableway'))
-# top 10 values for piste:type from taginfo
-road_kind_piste = set(('nordic', 'downhill', 'sleigh', 'skitour', 'hike',
-                       'sled', 'yes', 'snow_park', 'playground', 'ski_jump'))
-
-
-def _road_kind(properties):
-    highway = properties.get('highway')
-    if highway in road_kind_highway:
-        return 'highway'
-    if highway in road_kind_major_road:
-        return 'major_road'
-    piste_type = properties.get('piste_type')
-    if piste_type in road_kind_piste:
-        return 'piste'
-    if highway in road_kind_path:
-        return 'path'
-    railway = properties.get('railway')
-    if railway in road_kind_rail:
-        return 'rail'
-    route = properties.get('route')
-    if route == 'ferry':
-        return 'ferry'
-    aerialway = properties.get('aerialway')
-    if aerialway in road_kind_aerialway:
-        return 'aerialway'
-    if highway == 'motorway_junction':
-        return 'exit'
-    leisure = properties.get('leisure')
-    if leisure == 'track':
-        # note: racetrack rather than track, as track might be confusing
-        # between a track for racing and a track as in a faint trail.
-        return 'racetrack'
-    man_made = properties.get('man_made')
-    if man_made == 'pier':
-        return 'path'
-    tags = properties.get('tags')
-    if tags:
-        whitewater = tags.get('whitewater')
-        if whitewater == 'portage_way':
-            return 'portage_way'
-    return 'minor_road'
-
-
 def add_id_to_properties(shape, properties, fid, zoom):
     properties['id'] = fid
     return shape, properties, fid
@@ -1581,6 +1526,21 @@ def _linemerge(geom):
         epsilon = max(map(abs, result_geom.bounds)) * float_info.epsilon * 1000
         result_geom = result_geom.simplify(epsilon, True)
 
+        result_geom_type = result_geom.type
+        # the geometry may still have invalid or repeated points if it has zero
+        # length segments, so remove anything where the length is less than
+        # epsilon.
+        if result_geom_type == 'LineString':
+            if result_geom.length < epsilon:
+                result_geom = None
+
+        elif result_geom_type == 'MultiLineString':
+            parts = []
+            for line in result_geom.geoms:
+                if line.length >= epsilon:
+                    parts.append(line)
+            result_geom = MultiLineString(parts)
+
     return result_geom if result_geom else MultiLineString([])
 
 
@@ -2650,46 +2610,6 @@ def make_representative_point(shape, properties, fid, zoom):
     shape = shape.representative_point()
 
     return shape, properties, fid
-
-
-def remove_abandoned_pistes(ctx):
-    """
-    Removes features tagged as abandoned pistes.
-
-    It checks the kind, because it doesn't matter if the piste is abandoned if
-    the kind was detected as a road or track. It also checks the value, as it
-    appears that 'piste:abandoned = no' accounts for 30% of the instances.
-
-    Finally, the piste_abandoned property is removed from the feature, as we
-    have filtered out all the 'yes' values, meaning that it conveys no useful
-    information any more.
-    """
-
-    feature_layers = ctx.feature_layers
-    zoom = ctx.tile_coord.zoom
-    source_layer = ctx.params.get('source_layer')
-    start_zoom = ctx.params.get('start_zoom', 0)
-
-    assert source_layer, 'remove_abandoned_pistes: missing source layer'
-
-    if zoom < start_zoom:
-        return None
-
-    layer = _find_layer(feature_layers, source_layer)
-    if layer is None:
-        return None
-
-    new_features = []
-    for feature in layer['features']:
-        shape, props, fid = feature
-
-        piste_abandoned = props.pop('piste_abandoned', None)
-        kind = props.get('kind')
-        if piste_abandoned != 'yes' or kind != 'piste':
-            new_features.append(feature)
-
-    layer['features'] = new_features
-    return layer
 
 
 def add_iata_code_to_airports(shape, properties, fid, zoom):
