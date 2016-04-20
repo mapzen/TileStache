@@ -24,6 +24,19 @@ import csv
 
 feet_pattern = re.compile('([+-]?[0-9.]+)\'(?: *([+-]?[0-9.]+)")?')
 number_pattern = re.compile('([+-]?[0-9.]+)')
+# pattern to detect numbers with units.
+# PLEASE: keep this in sync with the conversion factors below.
+unit_pattern = re.compile('([+-]?[0-9.]+) *(mi|km|m|nmi|ft)')
+
+# multiplicative conversion factor from the unit into meters.
+# PLEASE: keep this in sync with the unit_pattern above.
+unit_conversion_factor = {
+    'mi':  1609.3440,
+    'km':  1000.0000,
+    'm':      1.0000,
+    'nmi': 1852.0000,
+    'ft':     0.3048
+}
 
 # used to detect if the "name" of a building is
 # actually a house number.
@@ -51,11 +64,14 @@ def _to_float_meters(x):
     # trim whitespace to simplify further matching
     x = x.strip()
 
-    # try explicit meters suffix
-    if x.endswith(' m'):
-        meters_as_float = to_float(x[:-2])
-        if meters_as_float is not None:
-            return meters_as_float
+    # try looking for a unit
+    unit_match = unit_pattern.match(x)
+    if unit_match is not None:
+        value = unit_match.group(1)
+        units = unit_match.group(2)
+        value_as_float = to_float(value)
+        if value_as_float is not None:
+            return value_as_float * unit_conversion_factor[units]
 
     # try if it looks like an expression in feet via ' "
     feet_match = feet_pattern.match(x)
@@ -74,7 +90,8 @@ def _to_float_meters(x):
             total_inches += inches_as_float
             parsed_feet_or_inches = True
         if parsed_feet_or_inches:
-            meters = total_inches * 0.02544
+            # international inch is exactly 25.4mm
+            meters = total_inches * 0.0254
             return meters
 
     # try and match the first number that can be parsed
