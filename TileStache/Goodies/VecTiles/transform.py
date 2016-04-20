@@ -3130,3 +3130,16 @@ def add_state_to_stations(shape, properties, fid, zoom):
     properties['state'] = state
 
     return shape, properties, fid
+
+
+def height_to_meters(shape, props, fid, zoom):
+    """
+    If the properties has a "height" entry, then convert that to meters.
+    """
+
+    height = props.get('height')
+    if not height:
+        return shape, props, fid
+
+    props['height'] = _to_float_meters(height)
+    return shape, props, fid
