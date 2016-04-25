@@ -304,6 +304,14 @@ def place_population_int(shape, properties, fid, zoom):
     return shape, properties, fid
 
 
+def pois_capacity_int(shape, properties, fid, zoom):
+    pois_capacity_str = properties.pop('capacity', None)
+    capacity = to_float(pois_capacity_str)
+    if capacity is not None:
+        properties['capacity'] = int(capacity)
+    return shape, properties, fid
+
+
 def water_tunnel(shape, properties, fid, zoom):
     tunnel = properties.pop('tunnel', None)
     if tunnel in (None, 'no', 'false', '0'):
