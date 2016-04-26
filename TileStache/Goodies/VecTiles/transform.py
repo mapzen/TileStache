@@ -3141,6 +3141,7 @@ def add_state_to_stations(shape, properties, fid, zoom):
     """
 
     kind = properties.get('kind')
+    assert kind, "WTF: kind should be set on [%r]: %r" % (fid, properties)
     if kind not in ('station'):
         return shape, properties, fid
 
@@ -3167,4 +3168,16 @@ def height_to_meters(shape, props, fid, zoom):
         return shape, props, fid
 
     props['height'] = _to_float_meters(height)
+    return shape, props, fid
+
+def elevation_to_meters(shape, props, fid, zoom):
+    """
+    If the properties has an "elevation" entry, then convert that to meters.
+    """
+
+    elevation = props.get('elevation')
+    if not elevation:
+        return shape, props, fid
+
+    props['elevation'] = _to_float_meters(elevation)
     return shape, props, fid
