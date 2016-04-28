@@ -51,8 +51,17 @@ def _by_transit_score(feature):
     return props.get('mz_transit_score', 0)
 
 
-def _sort_by_transit_score_then_feature_id(features):
+def _by_peak_elevation(feature):
+    wkb, props, fid = feature
+    kind = props.get('kind')
+    if kind != 'peak' and kind != 'volcano':
+        return 0
+    return props.get('elevation', 0)
+
+
+def _sort_by_transit_score_then_elevation_then_feature_id(features):
     features.sort(key=_by_feature_id)
+    features.sort(key=_by_peak_elevation, reverse=True)
     features.sort(key=_by_transit_score, reverse=True)
     return features
 
@@ -83,7 +92,7 @@ def places(features, zoom):
 
 
 def pois(features, zoom):
-    return _sort_by_transit_score_then_feature_id(features)
+    return _sort_by_transit_score_then_elevation_then_feature_id(features)
 
 
 def roads(features, zoom):
