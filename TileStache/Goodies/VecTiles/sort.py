@@ -53,7 +53,8 @@ def _by_transit_score(feature):
 
 def _by_peak_elevation(feature):
     wkb, props, fid = feature
-    if props.get('kind') != 'peak':
+    kind = props.get('kind')
+    if kind != 'peak' and kind != 'volcano':
         return 0
     return props.get('elevation', 0)
 
