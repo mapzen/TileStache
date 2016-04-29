@@ -2141,6 +2141,7 @@ def remove_duplicate_features(ctx):
     geometry_types = ctx.params.get('geometry_types')
     min_distance = ctx.params.get('min_distance', 0.0)
     none_means_unique = ctx.params.get('none_means_unique', True)
+    end_zoom = ctx.params.get('end_zoom')
 
     # can use either a single source layer, or multiple source
     # layers, but not both.
@@ -2155,6 +2156,9 @@ def remove_duplicate_features(ctx):
     assert geometry_types, 'remove_duplicate_features: missing or empty geometry types'
 
     if zoom < start_zoom:
+        return None
+
+    if end_zoom is not None and zoom > end_zoom:
         return None
 
     # allow either a single or multiple layers to be used.
