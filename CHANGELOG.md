@@ -1,3 +1,20 @@
+v0.10.0
+------
+* Delegate quantization to mapbox-vector-tile. See [#141](https://github.com/mapzen/TileStache/pull/141).
+* Add `is_empty` property for geometry proxy for Shapely's `STRtree` calculation. See [#135](https://github.com/mapzen/TileStache/pull/135).
+* Add transform for pois to convert `capacity` to integer. See [#146](https://github.com/mapzen/TileStache/pull/146).
+* Add function to convert any `elevation` unit value to meters. See [#145](https://github.com/mapzen/TileStache/pull/145), [#147](https://github.com/mapzen/TileStache/pull/147), [fb174cd6](https://github.com/mapzen/TileStache/commit/fb174cd6d2c37138a904dfd9c5491db964265546), and [a5b0cd1e](https://github.com/mapzen/TileStache/commit/a5b0cd1e87777dbda892696a90dac14590a4940e).
+* Augment sort order to also include `peak` and `volcano` elevation. See [#148](https://github.com/mapzen/TileStache/pull/148).
+* Add end zoom to remove duplicate **pois** function. See [#149](https://github.com/mapzen/TileStache/pull/149).
+* Add transform to convert `admin_level` to an integer. See [#136](https://github.com/mapzen/TileStache/pull/136).
+* Update road kind for `whitewater=portage_way`. See [#140](https://github.com/mapzen/TileStache/pull/140).
+* Remove junk `highway=minor` and `highway=footpath` from road kind calculation. See [#137](https://github.com/mapzen/TileStache/pull/137).
+* Remove unused **roads** kind function and abandoned pistes filter. See [f43cb03986](https://github.com/mapzen/TileStache/commit/f43cb03986bd121f3503f39a829b9dfdab870517).
+* Remove the unused `road_sort_key` transform. See [#142](https://github.com/mapzen/TileStache/pull/142).
+* Removed unused **buildings** kind calculation. See [#139](https://github.com/mapzen/TileStache/pull/139).
+* Remove unused **boundaries** transforms. See [#138](https://github.com/mapzen/TileStache/pull/138).
+* Cleanup for **roads** YAML and duplicate points fix. See [#143](https://github.com/mapzen/TileStache/pull/143) and [121a0bae5](https://github.com/mapzen/TileStache/commit/121a0bae548f1f322f9af46c478f45c811fb7e49).
+
 v0.9.0
 ------
 * After merging, simplify with a very small tolerance to remove duplicate and almost-colinear points
