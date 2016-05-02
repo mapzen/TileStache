@@ -1777,6 +1777,11 @@ def generate_label_features(ctx):
             sport = properties.get('sport')
             if not sport:
                 continue
+            # if we have a sport tag but no name, we only want it
+            # included if it's not a rock or stone
+            kind = properties.get('kind')
+            if kind in ('rock', 'stone'):
+                continue
 
         label_point = shape.representative_point()
 
