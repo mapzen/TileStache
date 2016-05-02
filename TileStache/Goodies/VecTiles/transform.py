@@ -3200,3 +3200,20 @@ def add_is_bicycle_route(shape, props, fid, zoom):
             'cycleway_both' in props):
         props['is_bicycle_route'] = 'yes'
     return shape, props, fid
+
+
+def normalize_cycle_left_right(shape, props, fid, zoom):
+    """
+    If the properties contain both a cycleway:left and cycleway:right
+    with the same values, those should be removed and replaced with a
+    single cycleway property.
+    """
+    cycleway = props.get('cycleway')
+    cycleway_left = props.get('cycleway_left')
+    cycleway_right = props.get('cycleway_right')
+    if (cycleway_left and cycleway_right and cycleway_left == cycleway_right
+            and (not cycleway or cycleway_left == cycleway)):
+        props['cycleway'] = cycleway_left
+        del props['cycleway_left']
+        del props['cycleway_right']
+    return shape, props, fid
