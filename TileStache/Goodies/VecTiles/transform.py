@@ -3185,3 +3185,14 @@ def elevation_to_meters(shape, props, fid, zoom):
 
     props['elevation'] = _to_float_meters(elevation)
     return shape, props, fid
+
+
+def add_is_bicycle_route(shape, props, fid, zoom):
+    """
+    If the props contain a bicycle_network tag or cycleway, it should
+    have an is_bicycle_route boolean.
+    """
+    props.pop('is_bicycle_route', None)
+    if 'bicycle_network' in props or 'cycleway' in props:
+        props['is_bicycle_route'] = 'yes'
+    return shape, props, fid
