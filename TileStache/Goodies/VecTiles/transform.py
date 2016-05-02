@@ -3187,33 +3187,39 @@ def elevation_to_meters(shape, props, fid, zoom):
     return shape, props, fid
 
 
-def add_is_bicycle_route(shape, props, fid, zoom):
-    """
-    If the props contain a bicycle_network tag or cycleway, it should
-    have an is_bicycle_route boolean.
-    """
-    props.pop('is_bicycle_route', None)
-    if ('bicycle_network' in props or
-            'cycleway' in props or
-            'cycleway_left' in props or
-            'cycleway_right' in props or
-            'cycleway_both' in props):
-        props['is_bicycle_route'] = 'yes'
-    return shape, props, fid
-
-
-def normalize_cycle_left_right(shape, props, fid, zoom):
+def normalize_cycleway(shape, props, fid, zoom):
     """
     If the properties contain both a cycleway:left and cycleway:right
     with the same values, those should be removed and replaced with a
-    single cycleway property.
+    single cycleway property. Additionally, if a cycleway_both tag is
+    present, normalize that to the cycleway tag.
     """
     cycleway = props.get('cycleway')
     cycleway_left = props.get('cycleway_left')
     cycleway_right = props.get('cycleway_right')
+
+    cycleway_both = props.pop('cycleway_both', None)
+    if cycleway_both and not cycleway:
+        props['cycleway'] = cycleway = cycleway_both
+
     if (cycleway_left and cycleway_right and cycleway_left == cycleway_right
             and (not cycleway or cycleway_left == cycleway)):
         props['cycleway'] = cycleway_left
         del props['cycleway_left']
         del props['cycleway_right']
+    return shape, props, fid
+
+
+def add_is_bicycle_route(shape, props, fid, zoom):
+    """
+    If the props contain a bicycle_network tag or cycleway, it should
+    have an is_bicycle_route boolean. Depends on the
+    normalize_cycleway transform to have been run first.
+    """
+    props.pop('is_bicycle_route', None)
+    if ('bicycle_network' in props or
+            'cycleway' in props or
+            'cycleway_left' in props or
+            'cycleway_right' in props):
+        props['is_bicycle_route'] = 'yes'
     return shape, props, fid
