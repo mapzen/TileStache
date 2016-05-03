@@ -1749,6 +1749,7 @@ def generate_label_features(ctx):
     label_property_value = ctx.params.get('label_property_value')
     new_layer_name = ctx.params.get('new_layer_name')
     drop_keys = ctx.params.get('drop_keys')
+    geom_types = ctx.params.get('geom_types', ['Polygon', 'MultiPolygon'])
 
     layer = _find_layer(feature_layers, source_layer)
     if layer is None:
@@ -1765,9 +1766,7 @@ def generate_label_features(ctx):
         if new_layer_name is None:
             new_features.append(feature)
 
-        # We only want to create label features for polygonal
-        # geometries
-        if shape.geom_type not in ('Polygon', 'MultiPolygon'):
+        if shape.geom_type not in geom_types:
             continue
 
         # Additionally, the feature needs to have a name or a sport
