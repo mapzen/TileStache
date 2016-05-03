@@ -3215,16 +3215,18 @@ def normalize_cycleway(shape, props, fid, zoom):
     return shape, props, fid
 
 
-def add_is_bicycle_route(shape, props, fid, zoom):
+def add_is_bicycle_related(shape, props, fid, zoom):
     """
-    If the props contain a bicycle_network tag or cycleway, it should
-    have an is_bicycle_route boolean. Depends on the
-    normalize_cycleway transform to have been run first.
+    If the props contain a bicycle_network tag, cycleway, or
+    highway=cycleway, it should have an is_bicycle_related
+    boolean. Depends on the normalize_cycleway transform to have been
+    run first.
     """
-    props.pop('is_bicycle_route', None)
+    props.pop('is_bicycle_related', None)
     if ('bicycle_network' in props or
             'cycleway' in props or
             'cycleway_left' in props or
-            'cycleway_right' in props):
-        props['is_bicycle_route'] = 'yes'
+            'cycleway_right' in props or
+            props.get('highway') == 'cycleway'):
+        props['is_bicycle_related'] = True
     return shape, props, fid
