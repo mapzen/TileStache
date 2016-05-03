@@ -1782,7 +1782,12 @@ def generate_label_features(ctx):
             if kind in ('rock', 'stone'):
                 continue
 
-        label_point = shape.representative_point()
+        # need to generate a single point for (multi)polygons, but lines and
+        # points can be labelled directly.
+        if shape.geom_type in ('Polygon', 'MultiPolygon'):
+            label_geom = shape.representative_point()
+        else:
+            label_geom = shape
 
         label_properties = properties.copy()
 
@@ -1795,7 +1800,7 @@ def generate_label_features(ctx):
         if label_property_name:
             label_properties[label_property_name] = label_property_value
 
-        label_feature = label_point, label_properties, fid
+        label_feature = label_geom, label_properties, fid
 
         new_features.append(label_feature)
 
