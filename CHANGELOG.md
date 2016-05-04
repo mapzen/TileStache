@@ -1,3 +1,24 @@
+v0.10.0
+------
+* Add `is_bicycle_related` transform. See [#152](https://github.com/mapzen/TileStache/pull/152).
+* Normalize cycling related properties so shared properties for `cycleway:left` and `cycleway:right` are deleted and projected into `cycleway` directly, and if `cycleway:both` is included but `cycleway` is not, project that onto `cycleway`. [#150](https://github.com/mapzen/TileStache/pull/150).
+* Don't label generate label placements for unnamed stone and rock features. See [#151](https://github.com/mapzen/TileStache/pull/151).
+* Don't generate label placements for point or line features (for islands), make it configurable. See [#153](https://github.com/mapzen/TileStache/pull/153) and [#154](https://github.com/mapzen/TileStache/pull/154).
+* Update road kind for `whitewater=portage_way`. See [#140](https://github.com/mapzen/TileStache/pull/140).
+* Remove junk `highway=minor` and `highway=footpath` from logic. See [#137](https://github.com/mapzen/TileStache/pull/137).
+* Remove outdated building kind calculation. See [#139](https://github.com/mapzen/TileStache/pull/139).
+* Remove outdated `road_sort_key` transform. See [#142](https://github.com/mapzen/TileStache/pull/142).
+* Remove outdated roads functions (logic is now carried in YAML queries), and fix duplicate points bug. See [#143](https://github.com/mapzen/TileStache/pull/143).
+* Remove outdated boundary transforms (logic is now carried in YAML queries). See [#138](https://github.com/mapzen/TileStache/pull/138).
+* Add transform to convert `admin_level` to an int. See [#136](https://github.com/mapzen/TileStache/pull/136).
+* Add transform for convert `capacity` in pois layer to int. See [#146](https://github.com/mapzen/TileStache/pull/146).
+* Add function to convert `height` values to meters. See [#145](https://github.com/mapzen/TileStache/pull/145).
+* Add function to convert `elevation` values meters. See [#147](https://github.com/mapzen/TileStache/pull/147).
+* Add sort order for `peak` and `volcano` features. See [#148](https://github.com/mapzen/TileStache/pull/148).
+* Add end zoom for remove duplicates function. See [#149](https://github.com/mapzen/TileStache/pull/149).
+* Add `is_empty` property for geometry proxy for Shapely's STRtree. See [#135](https://github.com/mapzen/TileStache/pull/135).
+* Delegate quantization to mapbox-vector-tile. See [#141](https://github.com/mapzen/TileStache/pull/141).
+
 v0.9.0
 ------
 * After merging, simplify with a very small tolerance to remove duplicate and almost-colinear points
