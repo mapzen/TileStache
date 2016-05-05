@@ -285,17 +285,6 @@ def route_name(shape, properties, fid, zoom):
     return shape, properties, fid
 
 
-def place_ne_capital(shape, properties, fid, zoom):
-    source = properties.get('source', '')
-    if source == 'naturalearthdata.com':
-        kind = properties.get('kind', '')
-        if kind == 'Admin-0 capital':
-            properties['capital'] = 'yes'
-        elif kind == 'Admin-1 capital':
-            properties['state_capital'] = 'yes'
-    return shape, properties, fid
-
-
 def place_population_int(shape, properties, fid, zoom):
     population_str = properties.pop('population', None)
     population = to_float(population_str)
