@@ -1,5 +1,9 @@
+v0.10.1
+-------
+* Update building transforms to work with `_` separated properties. The queries upstream changed to return `_` as the separator instead of `:`. See [#806](https://github.com/mapzen/vector-datasource/issues/806).
+
 v0.10.0
-------
+-------
 * Add `is_bicycle_related` transform. See [#152](https://github.com/mapzen/TileStache/pull/152).
 * Normalize cycling related properties so shared properties for `cycleway:left` and `cycleway:right` are deleted and projected into `cycleway` directly, and if `cycleway:both` is included but `cycleway` is not, project that onto `cycleway`. [#150](https://github.com/mapzen/TileStache/pull/150).
 * Don't label generate label placements for unnamed stone and rock features. See [#151](https://github.com/mapzen/TileStache/pull/151).
