@@ -162,7 +162,7 @@ def remove_feature_id(shape, properties, fid, zoom):
 
 def building_height(shape, properties, fid, zoom):
     height = _building_calc_height(
-        properties.get('height'), properties.get('building:levels'),
+        properties.get('height'), properties.get('building_levels'),
         _building_calc_levels)
     if height is not None:
         properties['height'] = height
@@ -173,7 +173,7 @@ def building_height(shape, properties, fid, zoom):
 
 def building_min_height(shape, properties, fid, zoom):
     min_height = _building_calc_height(
-        properties.get('min_height'), properties.get('building:min_levels'),
+        properties.get('min_height'), properties.get('building_min_levels'),
         _building_calc_min_levels)
     if min_height is not None:
         properties['min_height'] = min_height
@@ -193,8 +193,8 @@ def synthesize_volume(shape, props, fid, zoom):
 def building_trim_properties(shape, properties, fid, zoom):
     properties = _remove_properties(
         properties,
-        'building', 'building:part',
-        'building:levels', 'building:min_levels')
+        'building', 'building_part',
+        'building_levels', 'building_min_levels')
     return shape, properties, fid
 
 
