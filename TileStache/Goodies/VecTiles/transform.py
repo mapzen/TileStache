@@ -18,6 +18,7 @@ from shapely.geometry.collection import GeometryCollection
 from util import to_float
 from sort import pois as sort_pois
 from sys import float_info
+import pycountry
 import re
 import csv
 
@@ -352,8 +353,15 @@ tag_name_alternates = (
 def _convert_wof_l10n_name(x):
     assert x.startswith('name:')
     name_val = x[len('name:'):]
-    two_letter_lang = name_val[:2]
-    result = 'name:%s' % two_letter_lang
+    lang_str_iso_639_3 = name_val[:3]
+    if len(lang_str_iso_639_3) != 3:
+        return None
+    try:
+        lang = pycountry.languages.get(iso639_3_code=lang_str_iso_639_3)
+    except KeyError:
+        return None
+    lang_str_iso_639_1 = lang.iso639_1_code.encode('utf-8')
+    result = 'name:%s' % lang_str_iso_639_1
     return result
 
 
@@ -377,6 +385,8 @@ def tags_name_i18n(shape, properties, fid, zoom):
                 k.startswith('right:name:') and v != name):
             if is_wof:
                 k = _convert_wof_l10n_name(k)
+                if k is None:
+                    continue
             properties[k] = v
 
     for alt_tag_name_candidate in tag_name_alternates:

@@ -17,7 +17,7 @@ def is_installed(name):
 
 
 requires = ['ModestMaps >=1.3.0', 'simplejson', 'Werkzeug',
-            'mapbox-vector-tile', 'StreetNames', 'Pillow']
+            'mapbox-vector-tile', 'StreetNames', 'Pillow', 'pycountry']
 
 
 setup(name='TileStache',
