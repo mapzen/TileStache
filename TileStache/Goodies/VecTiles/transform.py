@@ -349,6 +349,14 @@ tag_name_alternates = (
 )
 
 
+def _convert_wof_l10n_name(x):
+    assert x.startswith('name:')
+    name_val = x[len('name:'):]
+    two_letter_lang = name_val[:2]
+    result = 'name:%s' % two_letter_lang
+    return result
+
+
 def tags_name_i18n(shape, properties, fid, zoom):
     tags = properties.get('tags')
     if not tags:
@@ -358,6 +366,8 @@ def tags_name_i18n(shape, properties, fid, zoom):
     if not name:
         return shape, properties, fid
 
+    is_wof = properties.get('source') == 'whosonfirst.mapzen.com'
+
     for k, v in tags.items():
         if (k.startswith('name:') and v != name or
                 k.startswith('alt_name:') and v != name or
@@ -365,6 +375,8 @@ def tags_name_i18n(shape, properties, fid, zoom):
                 k.startswith('old_name:') and v != name or
                 k.startswith('left:name:') and v != name or
                 k.startswith('right:name:') and v != name):
+            if is_wof:
+                k = _convert_wof_l10n_name(k)
             properties[k] = v
 
     for alt_tag_name_candidate in tag_name_alternates:
