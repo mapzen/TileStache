@@ -277,10 +277,13 @@ def road_abbreviate_name(shape, properties, fid, zoom):
 
 
 def route_name(shape, properties, fid, zoom):
-    route_name = properties.get('route_name', '')
-    if route_name:
-        name = properties.get('name', '')
-        if route_name == name:
+    rn = properties.get('route_name')
+    if rn:
+        name = properties.get('name')
+        if not name:
+            properties['name'] = rn
+            del properties['route_name']
+        elif rn == name:
             del properties['route_name']
     return shape, properties, fid
 
