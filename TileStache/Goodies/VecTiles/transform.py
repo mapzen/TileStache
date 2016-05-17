@@ -233,11 +233,11 @@ def road_classifier(shape, properties, fid, zoom):
     bridge = properties.get('bridge', '')
 
     if highway.endswith('_link'):
-        properties['is_link'] = 'yes'
+        properties['is_link'] = True
     if tunnel in ('yes', 'true'):
-        properties['is_tunnel'] = 'yes'
+        properties['is_tunnel'] = True
     if bridge in ('yes', 'true'):
-        properties['is_bridge'] = 'yes'
+        properties['is_bridge'] = True
 
     return shape, properties, fid
 
@@ -309,7 +309,7 @@ def water_tunnel(shape, properties, fid, zoom):
     if tunnel in (None, 'no', 'false', '0'):
         properties.pop('is_tunnel', None)
     else:
-        properties['is_tunnel'] = 'yes'
+        properties['is_tunnel'] = True
     return shape, properties, fid
 
 
@@ -1058,9 +1058,9 @@ def calculate_default_place_scalerank(shape, properties, fid, zoom):
 
     # adjust scalerank for state / country capitals
     if kind in ('city', 'town'):
-        if properties.get('state_capital') == 'yes':
+        if properties.get('state_capital'):
             scalerank -= 1
-        elif properties.get('capital') == 'yes':
+        elif properties.get('capital'):
             scalerank -= 2
 
     properties['scalerank'] = scalerank
@@ -1093,6 +1093,11 @@ def _make_new_properties(props, props_instructions):
             original_v = props.get(k)
             if original_v in v:
                 new_props[k] = v[original_v]
+        elif isinstance(v, list) and len(v) == 1:
+            # this is a hack to implement escaping for when the output value
+            # should be a value, but that value (e.g: True, or a dict) is
+            # used for some other purpose above.
+            new_props[k] = v[0]
         else:
             new_props[k] = v
 
@@ -1608,7 +1613,7 @@ def admin_boundaries(ctx):
     land-based boundaries, attempts to output a set of oriented
     boundaries with properties from both the left and right admin
     boundary, and also cut with the maritime information to provide
-    a `maritime_boundary=yes` value where there's overlap between
+    a `maritime_boundary: True` value where there's overlap between
     the maritime lines and the admin boundaries.
 
     Note that admin boundaries must alread be correctly oriented.
@@ -1653,8 +1658,8 @@ def admin_boundaries(ctx):
         if dims == _LINE_DIMENSION and kind is not None:
             admin_features[kind].append((shape, props, fid))
 
-        elif dims == _POLYGON_DIMENSION and maritime_boundary == 'yes':
-            maritime_features.append((shape, {'maritime_boundary':'no'}, 0))
+        elif dims == _POLYGON_DIMENSION and maritime_boundary:
+            maritime_features.append((shape, {'maritime_boundary':False}, 0))
 
     # there are separate polygons for each admin level, and
     # we only want to intersect like with like because it
@@ -1726,7 +1731,7 @@ def admin_boundaries(ctx):
     for shape, props, fid in cutter.new_features:
         maritime_boundary = props.pop('maritime_boundary', None)
         if maritime_boundary is None:
-            props['maritime_boundary'] = 'yes'
+            props['maritime_boundary'] = True
 
     layer['features'] = cutter.new_features
     return layer
@@ -2622,7 +2627,8 @@ def copy_features(ctx):
             # need to deep copy, otherwise we could have some
             # unintended side effects if either layer is
             # mutated later on.
-            new_features.append((shape.copy(), props.copy(), fid))
+            shape_copy = shape.__class__(shape)
+            new_features.append((shape_copy, props.copy(), fid))
 
     tgt_layer['features'].extend(new_features)
     return tgt_layer
@@ -2896,6 +2902,14 @@ class _SomeMatcher(object):
         return "+"
 
 
+class _TrueMatcher(object):
+    def match(self, other):
+        return other is True
+
+    def __repr__(self):
+        return "true"
+
+
 class _ExactMatcher(object):
     def __init__(self, value):
         self.value = value
@@ -2986,6 +3000,7 @@ class CSVMatcher(object):
         self.static_any = _AnyMatcher()
         self.static_none = _NoneMatcher()
         self.static_some = _SomeMatcher()
+        self.static_true = _TrueMatcher()
 
         # CSV - allow whitespace after the comma
         reader = csv.reader(fh, skipinitialspace=True)
@@ -3015,6 +3030,8 @@ class CSVMatcher(object):
             return self.static_none
         if v == '+':
             return self.static_some
+        if v == 'true':
+            return self.static_true
         if isinstance(v, str) and ';' in v:
             return _SetMatcher(set(v.split(';')))
         if v.startswith('>='):
