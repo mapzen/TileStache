@@ -347,22 +347,38 @@ tag_name_alternates = (
     'old_name',
     'reg_name',
     'short_name',
+    'name_left',
+    'name_right',
 )
 
 
 def _convert_wof_l10n_name(x):
-    assert x.startswith('name:')
-    name_val = x[len('name:'):]
-    lang_str_iso_639_3 = name_val[:3]
+    lang_str_iso_639_3 = x[:3]
     if len(lang_str_iso_639_3) != 3:
         return None
     try:
-        lang = pycountry.languages.get(iso639_3_code=lang_str_iso_639_3)
+        pycountry.languages.get(iso639_3_code=lang_str_iso_639_3)
     except KeyError:
         return None
-    lang_str_iso_639_1 = lang.iso639_1_code.encode('utf-8')
-    result = 'name:%s' % lang_str_iso_639_1
-    return result
+    return lang_str_iso_639_3
+
+
+def _convert_osm_l10n_name(x):
+    # first try a 639-1 code
+    try:
+        lang = pycountry.languages.get(iso639_1_code=x)
+    except KeyError:
+        # next, try a 639-2 code
+        try:
+            lang = pycountry.languages.get(iso639_2_code=x)
+        except KeyError:
+            # finally, try a 639-3 code
+            try:
+                lang = pycountry.languages.get(iso639_3_code=x)
+            except KeyError:
+                return None
+    iso639_3_code = lang.iso639_3_code.encode('utf-8')
+    return iso639_3_code
 
 
 def tags_name_i18n(shape, properties, fid, zoom):
@@ -374,20 +390,31 @@ def tags_name_i18n(shape, properties, fid, zoom):
     if not name:
         return shape, properties, fid
 
-    is_wof = properties.get('source') == 'whosonfirst.mapzen.com'
+    source = properties.get('source')
+    is_wof = source == 'whosonfirst.mapzen.com'
+    is_osm = source == 'openstreetmap.org'
+
+    alt_name_prefix_candidates = []
+    convert_fn = lambda x: None
+    if is_osm:
+        alt_name_prefix_candidates = [
+            'name:left:', 'name:right:', 'name:', 'alt_name:', 'old_name:'
+        ]
+        convert_fn = _convert_osm_l10n_name
+    elif is_wof:
+        alt_name_prefix_candidates = ['name:']
+        convert_fn = _convert_wof_l10n_name
 
     for k, v in tags.items():
-        if (k.startswith('name:') and v != name or
-                k.startswith('alt_name:') and v != name or
-                k.startswith('alt_name_') and v != name or
-                k.startswith('old_name:') and v != name or
-                k.startswith('left:name:') and v != name or
-                k.startswith('right:name:') and v != name):
-            if is_wof:
-                k = _convert_wof_l10n_name(k)
-                if k is None:
-                    continue
-            properties[k] = v
+        if v == name:
+            continue
+        for candidate in alt_name_prefix_candidates:
+            if k.startswith(candidate):
+                lang_code = k[len(candidate):]
+                normalized_lang_code = convert_fn(lang_code)
+                if normalized_lang_code:
+                    lang_key = '%s%s' % (candidate, normalized_lang_code)
+                    properties[lang_key] = v
 
     for alt_tag_name_candidate in tag_name_alternates:
         alt_tag_name_value = tags.get(alt_tag_name_candidate)
