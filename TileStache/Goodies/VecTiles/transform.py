@@ -198,16 +198,6 @@ def building_trim_properties(shape, properties, fid, zoom):
     return shape, properties, fid
 
 
-def road_kind(shape, properties, fid, zoom):
-    source = properties.get('source')
-    assert source, 'Missing source in road query'
-    if source == 'naturalearthdata.com':
-        return shape, properties, fid
-
-    properties['kind'] = _road_kind(properties)
-    return shape, properties, fid
-
-
 def road_classifier(shape, properties, fid, zoom):
     source = properties.get('source')
     assert source, 'Missing source in road query'
