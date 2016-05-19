@@ -370,7 +370,7 @@ def _convert_osm_l10n_name(x):
     except KeyError:
         # next, try a 639-2 code
         try:
-            lang = pycountry.languages.get(iso639_2_code=x)
+            lang = pycountry.languages.get(iso639_2T_code=x)
         except KeyError:
             # finally, try a 639-3 code
             try:
