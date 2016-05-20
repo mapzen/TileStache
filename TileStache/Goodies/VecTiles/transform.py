@@ -18,6 +18,7 @@ from shapely.geometry.collection import GeometryCollection
 from util import to_float
 from sort import pois as sort_pois
 from sys import float_info
+import pycountry
 import re
 import csv
 
@@ -326,7 +327,89 @@ tag_name_alternates = (
     'old_name',
     'reg_name',
     'short_name',
+    'name_left',
+    'name_right',
 )
+
+
+def _convert_wof_l10n_name(x):
+    lang_str_iso_639_3 = x[:3]
+    if len(lang_str_iso_639_3) != 3:
+        return None
+    try:
+        pycountry.languages.get(iso639_3_code=lang_str_iso_639_3)
+    except KeyError:
+        return None
+    return lang_str_iso_639_3
+
+
+def _normalize_osm_lang_code(x):
+    # first try a 639-1 code
+    try:
+        lang = pycountry.languages.get(iso639_1_code=x)
+    except KeyError:
+        # next, try a 639-2 code
+        try:
+            lang = pycountry.languages.get(iso639_2T_code=x)
+        except KeyError:
+            # finally, try a 639-3 code
+            try:
+                lang = pycountry.languages.get(iso639_3_code=x)
+            except KeyError:
+                return None
+    iso639_3_code = lang.iso639_3_code.encode('utf-8')
+    return iso639_3_code
+
+
+def _normalize_country_code(x):
+    x = x.upper()
+    try:
+        c = pycountry.countries.get(alpha2=x)
+    except KeyError:
+        try:
+            c = pycountry.countries.get(alpha3=x)
+        except KeyError:
+            try:
+                c = pycountry.countries.get(numeric_code=x)
+            except KeyError:
+                return None
+    alpha2_code = c.alpha2
+    return alpha2_code
+
+
+osm_l10n_lookup = {
+    'zh-min-nan': 'nan',
+    'zh-yue': 'yue',
+}
+
+
+def osm_l10n_name_lookup(x):
+    lookup = osm_l10n_lookup.get(x)
+    if lookup is not None:
+        return lookup
+    else:
+        return x
+
+
+def _convert_osm_l10n_name(x):
+    x = osm_l10n_name_lookup(x)
+
+    if '_' not in x:
+        return _normalize_osm_lang_code(x)
+
+    fields_by_underscore = x.split('_', 1)
+    lang_code_candidate, country_candidate = fields_by_underscore
+
+    lang_code_result = _normalize_osm_lang_code(lang_code_candidate)
+    if lang_code_result is None:
+        return None
+
+    country_result = _normalize_country_code(country_candidate)
+    if country_result is None:
+        return None
+
+    result = '%s_%s' % (lang_code_result, country_result)
+    return result
 
 
 def tags_name_i18n(shape, properties, fid, zoom):
@@ -338,14 +421,31 @@ def tags_name_i18n(shape, properties, fid, zoom):
     if not name:
         return shape, properties, fid
 
+    source = properties.get('source')
+    is_wof = source == 'whosonfirst.mapzen.com'
+    is_osm = source == 'openstreetmap.org'
+
+    alt_name_prefix_candidates = []
+    convert_fn = lambda x: None
+    if is_osm:
+        alt_name_prefix_candidates = [
+            'name:left:', 'name:right:', 'name:', 'alt_name:', 'old_name:'
+        ]
+        convert_fn = _convert_osm_l10n_name
+    elif is_wof:
+        alt_name_prefix_candidates = ['name:']
+        convert_fn = _convert_wof_l10n_name
+
     for k, v in tags.items():
-        if (k.startswith('name:') and v != name or
-                k.startswith('alt_name:') and v != name or
-                k.startswith('alt_name_') and v != name or
-                k.startswith('old_name:') and v != name or
-                k.startswith('left:name:') and v != name or
-                k.startswith('right:name:') and v != name):
-            properties[k] = v
+        if v == name:
+            continue
+        for candidate in alt_name_prefix_candidates:
+            if k.startswith(candidate):
+                lang_code = k[len(candidate):]
+                normalized_lang_code = convert_fn(lang_code)
+                if normalized_lang_code:
+                    lang_key = '%s%s' % (candidate, normalized_lang_code)
+                    properties[lang_key] = v
 
     for alt_tag_name_candidate in tag_name_alternates:
         alt_tag_name_value = tags.get(alt_tag_name_candidate)
