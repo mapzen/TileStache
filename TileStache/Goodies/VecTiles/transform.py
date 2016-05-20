@@ -198,26 +198,6 @@ def building_trim_properties(shape, properties, fid, zoom):
     return shape, properties, fid
 
 
-def pois_kind_aeroway_gate(shape, properties, fid, zoom):
-    aeroway = properties.pop('aeroway', None)
-    if aeroway is None:
-        return shape, properties, fid
-    kind = properties.get('kind')
-    if kind == 'gate' and aeroway:
-        properties['aeroway'] = aeroway
-    return shape, properties, fid
-
-
-def road_kind(shape, properties, fid, zoom):
-    source = properties.get('source')
-    assert source, 'Missing source in road query'
-    if source == 'naturalearthdata.com':
-        return shape, properties, fid
-
-    properties['kind'] = _road_kind(properties)
-    return shape, properties, fid
-
-
 def road_classifier(shape, properties, fid, zoom):
     source = properties.get('source')
     assert source, 'Missing source in road query'
@@ -2704,25 +2684,6 @@ def add_uic_ref(shape, properties, fid, zoom):
         return shape, properties, fid
 
 
-def normalize_leisure_kind(shape, properties, fid, zoom):
-    """
-    Normalise the various ways of representing fitness POIs to a
-    single kind=fitness.
-    """
-
-    kind = properties.get('kind')
-    if kind in ('fitness_centre', 'gym'):
-        properties['kind'] = 'fitness'
-
-    elif kind == 'sports_centre':
-        sport = properties.get('sport')
-        if sport in ('fitness', 'gym'):
-            properties.pop('sport')
-            properties['kind'] = 'fitness'
-
-    return shape, properties, fid
-
-
 def merge_features(ctx):
     """
     Merge (linear) features with the same properties together, attempting to
@@ -3154,30 +3115,6 @@ def update_parenthetical_properties(ctx):
 
     layer['features'] = new_features
     return layer
-
-
-def add_state_to_stations(shape, properties, fid, zoom):
-    """
-    If the feature is a station, and it has a state tag, then move that
-    tag to its properties.
-    """
-
-    kind = properties.get('kind')
-    assert kind, "WTF: kind should be set on [%r]: %r" % (fid, properties)
-    if kind not in ('station'):
-        return shape, properties, fid
-
-    tags = properties.get('tags')
-    if not tags:
-        return shape, properties, fid
-
-    state = tags.get('state')
-    if not state:
-        return shape, properties, fid
-
-    properties['state'] = state
-
-    return shape, properties, fid
 
 
 def height_to_meters(shape, props, fid, zoom):
