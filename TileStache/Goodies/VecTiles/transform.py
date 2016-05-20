@@ -363,7 +363,7 @@ def _convert_wof_l10n_name(x):
     return lang_str_iso_639_3
 
 
-def _convert_osm_l10n_name(x):
+def _normalize_osm_lang_code(x):
     # first try a 639-1 code
     try:
         lang = pycountry.languages.get(iso639_1_code=x)
@@ -379,6 +379,57 @@ def _convert_osm_l10n_name(x):
                 return None
     iso639_3_code = lang.iso639_3_code.encode('utf-8')
     return iso639_3_code
+
+
+def _normalize_country_code(x):
+    x = x.upper()
+    try:
+        c = pycountry.countries.get(alpha2=x)
+    except KeyError:
+        try:
+            c = pycountry.countries.get(alpha3=x)
+        except KeyError:
+            try:
+                c = pycountry.countries.get(numeric_code=x)
+            except KeyError:
+                return None
+    alpha2_code = c.alpha2
+    return alpha2_code
+
+
+osm_l10n_lookup = {
+    'zh-min-nan': 'nan',
+    'zh-yue': 'yue',
+}
+
+
+def osm_l10n_name_lookup(x):
+    lookup = osm_l10n_lookup.get(x)
+    if lookup is not None:
+        return lookup
+    else:
+        return x
+
+
+def _convert_osm_l10n_name(x):
+    x = osm_l10n_name_lookup(x)
+
+    if '_' not in x:
+        return _normalize_osm_lang_code(x)
+
+    fields_by_underscore = x.split('_', 1)
+    lang_code_candidate, country_candidate = fields_by_underscore
+
+    lang_code_result = _normalize_osm_lang_code(lang_code_candidate)
+    if lang_code_result is None:
+        return None
+
+    country_result = _normalize_country_code(country_candidate)
+    if country_result is None:
+        return None
+
+    result = '%s_%s' % (lang_code_result, country_result)
+    return result
 
 
 def tags_name_i18n(shape, properties, fid, zoom):
