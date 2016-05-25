@@ -1825,15 +1825,11 @@ def generate_label_features(ctx):
     label_property_name = ctx.params.get('label_property_name')
     label_property_value = ctx.params.get('label_property_value')
     new_layer_name = ctx.params.get('new_layer_name')
-    drop_keys = ctx.params.get('drop_keys')
     geom_types = ctx.params.get('geom_types', ['Polygon', 'MultiPolygon'])
 
     layer = _find_layer(feature_layers, source_layer)
     if layer is None:
         return None
-
-    if drop_keys is None:
-        drop_keys = []
 
     new_features = []
     for feature in layer['features']:
@@ -1867,12 +1863,6 @@ def generate_label_features(ctx):
             label_geom = shape
 
         label_properties = properties.copy()
-
-        # drop particular keys which might not be relevant any more.
-        # for example, mz_is_building, which is used by a later
-        # polygon processing stage, but irrelevant to label processing.
-        for k in drop_keys:
-            label_properties.pop(k, None)
 
         if label_property_name:
             label_properties[label_property_name] = label_property_value
