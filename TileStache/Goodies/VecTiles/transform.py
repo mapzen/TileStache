@@ -3280,3 +3280,20 @@ def add_is_bicycle_related(shape, props, fid, zoom):
             props.get('highway') == 'cycleway'):
         props['is_bicycle_related'] = True
     return shape, props, fid
+
+
+def drop_properties_with_prefix(ctx):
+    """
+    Iterate through all features, dropping all properties that start
+    with prefix.
+    """
+
+    prefix = ctx.params.get('prefix')
+    assert prefix, 'drop_properties_with_prefix: missing prefix param'
+
+    feature_layers = ctx.feature_layers
+    for feature_layer in feature_layers:
+        for shape, props, fid in feature_layer['features']:
+            for k in props.keys():
+                if k.startswith(prefix):
+                    del props[k]
