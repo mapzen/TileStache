@@ -1,4 +1,8 @@
-#TileStache
+# Note: This repository is deprecated, and no longer supported.
+
+To serve tiles, please have a look at our [documentation for getting started](https://github.com/tilezen/vector-datasource/wiki/Mapzen-Vector-Tile-Service).
+
+##TileStache
 
 _a stylish alternative for caching your map tiles_
 
