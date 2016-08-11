@@ -19,6 +19,7 @@ from util import to_float
 from sort import pois as sort_pois
 from sys import float_info
 import re
+import shapely.wkb
 import csv
 
 
@@ -3234,3 +3235,61 @@ def add_is_bicycle_related(shape, props, fid, zoom):
             props.get('highway') == 'cycleway'):
         props['is_bicycle_related'] = True
     return shape, props, fid
+
+
+def handle_label_placement(ctx):
+    """
+    Converts a geometry label column into a separate feature.
+    """
+    layers = ctx.params.get('layers', None)
+    location_property = ctx.params.get('location_property', None)
+    label_property_name = ctx.params.get('label_property_name', None)
+    label_property_value = ctx.params.get('label_property_value', None)
+    label_where = ctx.params.get('label_where', None)
+
+    assert layers, 'handle_label_placement: Missing layers'
+    assert location_property, \
+        'handle_label_placement: Missing location_property'
+    assert label_property_name, \
+        'handle_label_placement: Missing label_property_name'
+    assert label_property_value, \
+        'handle_label_placement: Missing label_property_value'
+
+    clip_bounds = Box(*ctx.padded_bounds)
+
+    layers = set(layers)
+
+    if label_where:
+        label_where = compile(label_where, 'queries.yaml', 'eval')
+
+    for feature_layer in ctx.feature_layers:
+        if feature_layer['name'] not in layers:
+            continue
+
+        new_features = []
+        for feature in feature_layer['features']:
+            shape, props, fid = feature
+
+            label_wkb = props.pop(location_property, None)
+            new_features.append(feature)
+
+            if not label_wkb:
+                continue
+
+            local_state = props.copy()
+            local_state['properties'] = props
+            if label_where and not eval(label_where, {}, local_state):
+                continue
+
+            label_shape = shapely.wkb.loads(label_wkb)
+            if not (label_shape.type in ('Point', 'MultiPoint') and
+                    clip_bounds.intersects(label_shape)):
+                continue
+
+            point_props = props.copy()
+            point_props[label_property_name] = label_property_value
+            point_feature = label_shape, point_props, fid
+
+            new_features.append(point_feature)
+
+        feature_layer['features'] = new_features
