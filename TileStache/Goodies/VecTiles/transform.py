@@ -2631,7 +2631,8 @@ def copy_features(ctx):
             # need to deep copy, otherwise we could have some
             # unintended side effects if either layer is
             # mutated later on.
-            new_features.append((shape.copy(), props.copy(), fid))
+            shape_copy = shape.__class__(shape)
+            new_features.append((shape_copy, props.copy(), fid))
 
     tgt_layer['features'].extend(new_features)
     return tgt_layer
