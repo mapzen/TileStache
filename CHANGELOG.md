@@ -1,3 +1,8 @@
+v0.10.2
+-------
+* Backport handle_label_placement transform
+* Backport shape copy fix
+
 v0.10.1
 -------
 * Update building transforms to work with `_` separated properties. The queries upstream changed to return `_` as the separator instead of `:`. See [#806](https://github.com/mapzen/vector-datasource/issues/806).
