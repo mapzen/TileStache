@@ -339,7 +339,7 @@ class Response:
         features = get_features(self.dbinfo, self.query[format], self.geometry_types, self.transform_fn, self.sort_fn, self.coord.zoom)
 
         if format == 'MVT':
-            mvt.encode(out, features, self.coord, self.layer_name)
+            mvt.encode(out, features, self.coord, self.bounds, self.layer_name)
         
         elif format == 'JSON':
             geojson.encode(out, features, self.zoom)
